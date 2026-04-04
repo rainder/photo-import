@@ -1,6 +1,9 @@
+mod import;
 mod photos;
+mod volumes;
 
 use photos::PhotoMeta;
+use volumes::CameraVolume;
 
 #[tauri::command]
 fn list_photos(volume_path: String) -> Vec<PhotoMeta> {
@@ -12,11 +15,24 @@ fn get_thumbnail(path: String) -> Result<String, String> {
     photos::get_thumbnail(&path)
 }
 
+#[tauri::command]
+fn get_camera_volumes() -> Vec<CameraVolume> {
+    volumes::list_camera_volumes()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![list_photos, get_thumbnail])
+        .invoke_handler(tauri::generate_handler![
+            list_photos,
+            get_thumbnail,
+            get_camera_volumes
+        ])
+        .setup(|app| {
+            volumes::start_volume_watcher(app.handle().clone());
+            Ok(())
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
