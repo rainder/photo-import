@@ -1,0 +1,31 @@
+[package]
+name = "photo-import"
+version = "0.1.0"
+description = "A Tauri App for importing photos from SD cards"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "photo_import_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[[bin]]
+name = "photo-import"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["protocol-asset"] }
+tauri-plugin-opener = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+notify = "7"
+image = { version = "0.25", features = ["jpeg"] }
+img-parts = "0.3"
+base64 = "0.22"
+chrono = "0.4"
+
+[dev-dependencies]
+tempfile = "3"
