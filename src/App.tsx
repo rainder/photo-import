@@ -9,8 +9,8 @@ import { Preview } from "./components/Preview";
 import { ActionBar } from "./components/ActionBar";
 import {
   ImportDialog,
-  ImportStage,
-  ImportProgress,
+  type ImportStage,
+  type ImportProgress,
 } from "./components/ImportDialog";
 import { importToPhotos, deleteFromCard } from "./lib/commands";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -33,7 +33,7 @@ export default function App() {
   const [deleteAfterImport, setDeleteAfterImport] = useState(false);
   const [importStage, setImportStage] = useState<ImportStage | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
-  const [importedPaths, setImportedPaths] = useState<Set<string>>(new Set());
+  const [_importedPaths, setImportedPaths] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     store.get<boolean>("autoDetect").then((val) => {

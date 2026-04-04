@@ -13,7 +13,7 @@ interface ToolbarProps {
 
 export function Toolbar({
   selectedCount,
-  totalCount,
+  totalCount: _totalCount,
   sortBy,
   onSortChange,
   onSelectAll,

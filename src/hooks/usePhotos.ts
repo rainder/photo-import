@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { listPhotos, PhotoMeta } from "../lib/commands";
+import { listPhotos, type PhotoMeta } from "../lib/commands";
 
 export function usePhotos(volumePath: string | null) {
   const [photos, setPhotos] = useState<PhotoMeta[]>([]);

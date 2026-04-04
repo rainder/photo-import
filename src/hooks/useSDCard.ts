@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { getCameraVolumes, CameraVolume } from "../lib/commands";
+import { getCameraVolumes, type CameraVolume } from "../lib/commands";
 
 export function useSDCard(autoDetect: boolean) {
   const [volume, setVolume] = useState<CameraVolume | null>(null);

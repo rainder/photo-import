@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState, useEffect } from "react";
-import { FixedSizeGrid, GridChildComponentProps } from "react-window";
-import { PhotoMeta } from "../lib/commands";
+import { Grid as VirtualGrid, type CellComponentProps, type GridImperativeAPI } from "react-window";
+import type { PhotoMeta } from "../lib/commands";
 import { Thumbnail } from "./Thumbnail";
 
 interface GridProps {
@@ -23,7 +23,7 @@ export function Grid({
   columnCount,
 }: GridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<FixedSizeGrid>(null);
+  const gridRef = useRef<GridImperativeAPI>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
   useEffect(() => {
@@ -49,7 +49,7 @@ export function Grid({
   const rowCount = Math.ceil(photos.length / columnCount);
 
   const Cell = useCallback(
-    ({ columnIndex, rowIndex, style }: GridChildComponentProps) => {
+    ({ columnIndex, rowIndex, style }: CellComponentProps) => {
       const index = rowIndex * columnCount + columnIndex;
       if (index >= photos.length) return <div style={style} />;
 
@@ -80,18 +80,18 @@ export function Grid({
 
   return (
     <div className="grid-container" ref={containerRef}>
-      <FixedSizeGrid
-        ref={gridRef}
+      <VirtualGrid
+        gridRef={gridRef}
         columnCount={columnCount}
         columnWidth={cellWidth}
         rowCount={rowCount}
         rowHeight={cellHeight}
-        width={dimensions.width}
-        height={dimensions.height}
-        overscanRowCount={2}
-      >
-        {Cell}
-      </FixedSizeGrid>
+        defaultWidth={dimensions.width}
+        defaultHeight={dimensions.height}
+        overscanCount={2}
+        cellComponent={Cell}
+        cellProps={{}}
+      />
     </div>
   );
 }

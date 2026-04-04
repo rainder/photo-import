@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { PhotoMeta } from "../lib/commands";
+import type { PhotoMeta } from "../lib/commands";
 import { convertFileSrc } from "@tauri-apps/api/core";
 
 interface PreviewProps {
