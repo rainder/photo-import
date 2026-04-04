@@ -13,7 +13,10 @@ import {
   ImportProgress,
 } from "./components/ImportDialog";
 import { importToPhotos, deleteFromCard } from "./lib/commands";
+import { LazyStore } from "@tauri-apps/plugin-store";
 import "./App.css";
+
+const store = new LazyStore("config.json");
 
 type SortBy = "name" | "date";
 
@@ -31,6 +34,20 @@ export default function App() {
   const [importStage, setImportStage] = useState<ImportStage | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const [importedPaths, setImportedPaths] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    store.get<boolean>("autoDetect").then((val) => {
+      if (val !== null && val !== undefined) setAutoDetect(val);
+    });
+  }, []);
+
+  const toggleAutoDetect = useCallback(() => {
+    setAutoDetect((prev) => {
+      const next = !prev;
+      store.set("autoDetect", next).then(() => store.save());
+      return next;
+    });
+  }, []);
 
   const photos = useMemo(() => {
     const sorted = [...rawPhotos];
@@ -118,7 +135,7 @@ export default function App() {
         volumeName={volume?.name ?? null}
         photoCount={photos.length}
         autoDetect={autoDetect}
-        onToggleAutoDetect={() => setAutoDetect((v) => !v)}
+        onToggleAutoDetect={toggleAutoDetect}
       />
       <Toolbar
         selectedCount={selection.count}
