@@ -1,6 +1,15 @@
+use base64::Engine;
+use image::imageops::FilterType;
 use serde::Serialize;
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::sync::Mutex;
+
+static THUMBNAIL_CACHE: std::sync::LazyLock<Mutex<HashMap<String, String>>> =
+    std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
+
+const THUMBNAIL_WIDTH: u32 = 400;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct PhotoMeta {
@@ -52,6 +61,30 @@ fn scan_dir_recursive(dir: &Path, photos: &mut Vec<PhotoMeta>) {
     }
 }
 
+pub fn get_thumbnail(path: &str) -> Result<String, String> {
+    // Check cache first
+    {
+        let cache = THUMBNAIL_CACHE.lock().map_err(|e| e.to_string())?;
+        if let Some(cached) = cache.get(path) {
+            return Ok(cached.clone());
+        }
+    }
+
+    // Load, resize, encode
+    let img = image::open(path).map_err(|e| format!("Failed to open image: {e}"))?;
+    let resized = img.resize(THUMBNAIL_WIDTH, u32::MAX, FilterType::Triangle);
+    let mut buf = std::io::Cursor::new(Vec::new());
+    resized
+        .write_to(&mut buf, image::ImageFormat::Jpeg)
+        .map_err(|e| format!("Failed to encode thumbnail: {e}"))?;
+    let b64 = base64::engine::general_purpose::STANDARD.encode(buf.into_inner());
+
+    // Cache and return
+    let mut cache = THUMBNAIL_CACHE.lock().map_err(|e| e.to_string())?;
+    cache.insert(path.to_string(), b64.clone());
+    Ok(b64)
+}
+
 fn is_jpeg(path: &Path) -> bool {
     match path.extension().and_then(|e| e.to_str()) {
         Some(ext) => matches!(ext.to_lowercase().as_str(), "jpg" | "jpeg"),
@@ -87,5 +120,21 @@ mod tests {
         let tmp = tempdir().unwrap();
         let photos = scan_dcim(tmp.path().to_str().unwrap());
         assert_eq!(photos.len(), 0);
+    }
+
+    #[test]
+    fn test_get_thumbnail_returns_base64() {
+        let tmp = tempdir().unwrap();
+        let img_path = tmp.path().join("test.jpg");
+
+        let img = image::RgbImage::new(100, 100);
+        img.save(&img_path).unwrap();
+
+        let result = get_thumbnail(img_path.to_str().unwrap());
+        assert!(result.is_ok());
+        let b64 = result.unwrap();
+        assert!(!b64.is_empty());
+        let decoded = base64::engine::general_purpose::STANDARD.decode(&b64).unwrap();
+        assert!(decoded.len() > 0);
     }
 }

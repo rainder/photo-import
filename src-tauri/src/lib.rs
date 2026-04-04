@@ -7,11 +7,16 @@ fn list_photos(volume_path: String) -> Vec<PhotoMeta> {
     photos::scan_dcim(&volume_path)
 }
 
+#[tauri::command]
+fn get_thumbnail(path: String) -> Result<String, String> {
+    photos::get_thumbnail(&path)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![list_photos])
+        .invoke_handler(tauri::generate_handler![list_photos, get_thumbnail])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
