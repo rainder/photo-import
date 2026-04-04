@@ -2,6 +2,7 @@ mod import;
 mod photos;
 mod volumes;
 
+use import::{DeleteResult, ImportResult};
 use photos::PhotoMeta;
 use volumes::CameraVolume;
 
@@ -20,6 +21,16 @@ fn get_camera_volumes() -> Vec<CameraVolume> {
     volumes::list_camera_volumes()
 }
 
+#[tauri::command]
+fn import_to_photos(paths: Vec<String>) -> ImportResult {
+    import::import_to_photos(&paths)
+}
+
+#[tauri::command]
+fn delete_from_card(paths: Vec<String>) -> DeleteResult {
+    import::delete_from_card(&paths)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -27,7 +38,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             list_photos,
             get_thumbnail,
-            get_camera_volumes
+            get_camera_volumes,
+            import_to_photos,
+            delete_from_card
         ])
         .setup(|app| {
             volumes::start_volume_watcher(app.handle().clone());
