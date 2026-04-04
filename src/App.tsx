@@ -1,121 +1,181 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useCallback, useMemo, useEffect } from "react";
+import { useSelection } from "./hooks/useSelection";
+import { usePhotos } from "./hooks/usePhotos";
+import { useSDCard } from "./hooks/useSDCard";
+import { TopBar } from "./components/TopBar";
+import { Toolbar } from "./components/Toolbar";
+import { Grid } from "./components/Grid";
+import { Preview } from "./components/Preview";
+import { ActionBar } from "./components/ActionBar";
+import {
+  ImportDialog,
+  ImportStage,
+  ImportProgress,
+} from "./components/ImportDialog";
+import { importToPhotos, deleteFromCard } from "./lib/commands";
+import "./App.css";
 
-function App() {
-  const [count, setCount] = useState(0)
+type SortBy = "name" | "date";
+
+export default function App() {
+  const [autoDetect, setAutoDetect] = useState(true);
+  const { volume } = useSDCard(autoDetect);
+  const { photos: rawPhotos, loading } = usePhotos(volume?.path ?? null);
+  const selection = useSelection();
+
+  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [columnCount, setColumnCount] = useState(5);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const [deleteAfterImport, setDeleteAfterImport] = useState(false);
+  const [importStage, setImportStage] = useState<ImportStage | null>(null);
+  const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
+  const [importedPaths, setImportedPaths] = useState<Set<string>>(new Set());
+
+  const photos = useMemo(() => {
+    const sorted = [...rawPhotos];
+    if (sortBy === "name") {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else {
+      sorted.sort((a, b) => a.date.localeCompare(b.date));
+    }
+    return sorted;
+  }, [rawPhotos, sortBy]);
+
+  const handleGridKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (previewIndex !== null) return;
+      if (e.key === " " && focusedIndex >= 0) {
+        e.preventDefault();
+        setPreviewIndex(focusedIndex);
+      }
+    },
+    [focusedIndex, previewIndex]
+  );
+
+  const handlePreviewNavigate = useCallback(
+    (delta: number) => {
+      setPreviewIndex((prev) => {
+        if (prev === null) return null;
+        const next = prev + delta;
+        if (next < 0) return photos.length - 1;
+        if (next >= photos.length) return 0;
+        return next;
+      });
+    },
+    [photos.length]
+  );
+
+  const handleImport = useCallback(() => {
+    setImportStage("confirm");
+  }, []);
+
+  const handleImportConfirm = useCallback(async () => {
+    const paths = Array.from(selection.selected);
+
+    if (importStage === "confirm") {
+      setImportStage("importing");
+
+      const succeeded: string[] = [];
+      for (let i = 0; i < paths.length; i++) {
+        setImportProgress({
+          current: i + 1,
+          total: paths.length,
+          currentFile: paths[i].split("/").pop() ?? paths[i],
+        });
+        const result = await importToPhotos([paths[i]]);
+        if (result.succeeded.length > 0) {
+          succeeded.push(paths[i]);
+        }
+      }
+
+      setImportedPaths((prev) => {
+        const next = new Set(prev);
+        succeeded.forEach((p) => next.add(p));
+        return next;
+      });
+
+      if (deleteAfterImport && succeeded.length > 0) {
+        setImportStage("confirm-delete");
+      } else {
+        setImportStage("done");
+      }
+    } else if (importStage === "confirm-delete") {
+      setImportStage("deleting");
+      await deleteFromCard(Array.from(selection.selected));
+      setImportStage("done");
+    }
+  }, [importStage, selection.selected, deleteAfterImport]);
+
+  const handleImportCancel = useCallback(() => {
+    setImportStage(null);
+    setImportProgress(null);
+  }, []);
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app" onKeyDown={handleGridKeyDown} tabIndex={0}>
+      <TopBar
+        volumeName={volume?.name ?? null}
+        photoCount={photos.length}
+        autoDetect={autoDetect}
+        onToggleAutoDetect={() => setAutoDetect((v) => !v)}
+      />
+      <Toolbar
+        selectedCount={selection.count}
+        totalCount={photos.length}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+        onSelectAll={() => selection.selectAll(photos.map((p) => p.path))}
+        onDeselectAll={selection.deselectAll}
+        columnCount={columnCount}
+        onColumnCountChange={setColumnCount}
+      />
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      {loading ? (
+        <div className="grid-empty">
+          <p>Loading photos...</p>
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      ) : (
+        <Grid
+          photos={photos}
+          isSelected={selection.isSelected}
+          focusedIndex={focusedIndex}
+          onSelect={selection.toggle}
+          onFocus={setFocusedIndex}
+          onPreview={setPreviewIndex}
+          columnCount={columnCount}
+        />
+      )}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      <ActionBar
+        selectedCount={selection.count}
+        deleteAfterImport={deleteAfterImport}
+        onToggleDelete={() => setDeleteAfterImport((v) => !v)}
+        onImport={handleImport}
+        importing={importStage === "importing"}
+      />
+
+      {previewIndex !== null && (
+        <Preview
+          photos={photos}
+          currentIndex={previewIndex}
+          isSelected={selection.isSelected(photos[previewIndex]?.path)}
+          onClose={() => setPreviewIndex(null)}
+          onNavigate={handlePreviewNavigate}
+          onToggleSelect={() => selection.toggle(photos[previewIndex]?.path)}
+        />
+      )}
+
+      {importStage && (
+        <ImportDialog
+          stage={importStage}
+          photoCount={selection.count}
+          deleteAfterImport={deleteAfterImport}
+          onConfirm={handleImportConfirm}
+          onCancel={handleImportCancel}
+          progress={importProgress}
+        />
+      )}
+    </div>
+  );
 }
-
-export default App
