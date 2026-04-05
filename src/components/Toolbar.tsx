@@ -47,8 +47,8 @@ export function Toolbar({
             type="range"
             min={3}
             max={8}
-            value={columnCount}
-            onChange={(e) => onColumnCountChange(Number(e.target.value))}
+            value={11 - columnCount}
+            onChange={(e) => onColumnCountChange(11 - Number(e.target.value))}
           />
         </label>
       </div>

@@ -30,7 +30,14 @@ export default function App() {
   const gridRef = useRef<GridHandle>(null);
 
   const [sortBy, setSortBy] = useState<SortBy>("date-desc");
-  const [columnCount, setColumnCount] = useState(5);
+  const [columnCount, setColumnCountRaw] = useState(5);
+  const setColumnCount = useCallback((val: number | ((prev: number) => number)) => {
+    setColumnCountRaw((prev) => {
+      const next = typeof val === "function" ? val(prev) : val;
+      store.set("columnCount", next).then(() => store.save());
+      return next;
+    });
+  }, []);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const [deleteAfterImport, setDeleteAfterImport] = useState(false);
@@ -43,6 +50,9 @@ export default function App() {
   useEffect(() => {
     store.get<boolean>("autoDetect").then((val) => {
       if (val !== null && val !== undefined) setAutoDetect(val);
+    });
+    store.get<number>("columnCount").then((val) => {
+      if (val !== null && val !== undefined) setColumnCount(val);
     });
   }, []);
 
@@ -128,7 +138,7 @@ export default function App() {
 
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (previewIndex !== null) return;
+      if (previewIndex !== null || importStage !== null) return;
       const lastIndex = photos.length - 1;
       switch (e.key) {
         case "Enter":
@@ -162,9 +172,22 @@ export default function App() {
           e.preventDefault();
           setFocusedIndex((prev) => Math.max(prev - columnCount, 0));
           break;
+        case "=":
+        case "+":
+          if (e.metaKey) {
+            e.preventDefault();
+            setColumnCount((prev) => Math.max(prev - 1, 3));
+          }
+          break;
+        case "-":
+          if (e.metaKey) {
+            e.preventDefault();
+            setColumnCount((prev) => Math.min(prev + 1, 8));
+          }
+          break;
       }
     },
-    [focusedIndex, previewIndex, photos, columnCount, selection]
+    [focusedIndex, previewIndex, importStage, photos, columnCount, selection]
   );
 
   const handlePreviewNavigate = useCallback(
@@ -244,6 +267,13 @@ export default function App() {
     setImportStage(null);
     setImportProgress(null);
   }, []);
+
+  const handleReviewCancel = useCallback((deselected: string[]) => {
+    if (deselected.length > 0) {
+      selection.removeMany(deselected);
+    }
+    setImportStage(null);
+  }, [selection]);
 
   const doPreviewDelete = useCallback(() => {
     if (previewIndex === null) return;
@@ -376,7 +406,9 @@ export default function App() {
           deleteAfterImport={deleteAfterImport}
           onToggleDelete={() => setDeleteAfterImport((v) => !v)}
           onConfirm={handleReviewConfirm}
-          onCancel={handleImportCancel}
+          onCancel={handleReviewCancel}
+          initialColumnCount={columnCount}
+          onColumnCountChange={setColumnCount}
         />
       )}
 

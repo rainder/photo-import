@@ -439,8 +439,45 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
+}
+
+.actionbar-delete-toggle input[type="checkbox"] {
+  display: none;
+}
+
+.delete-toggle-track {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: #444;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.delete-toggle-track.on {
+  background: #dc2626;
+}
+
+.delete-toggle-knob {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: left 0.2s;
+}
+
+.delete-toggle-track.on .delete-toggle-knob {
+  left: 18px;
+}
+
+.actionbar-delete-toggle input:checked ~ .delete-toggle-label {
+  color: #f87171;
 }
 
 .actionbar-shortcuts {
