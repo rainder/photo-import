@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { currentVersion } from "@/content/changelog";
+import ScreenshotCarousel from "./components/ScreenshotCarousel";
 
 const DOWNLOAD_URL = `/releases/Photo-Import_${currentVersion.version}_aarch64.dmg`;
 
@@ -71,8 +72,11 @@ export default function Home() {
           Photo Import
         </h1>
         <p className="mt-4 text-lg text-neutral-400 text-center max-w-xl">
-          Browse, preview, and import photos from your camera&apos;s SD card
-          directly into Apple Photos. Fast, keyboard-driven, and native.
+          I got tired of every photo import app being either slow, clunky, or
+          built for someone who doesn&apos;t use a keyboard. So I built the one
+          I actually wanted — fast, keyboard-driven, and laser-focused on
+          getting photos from your SD card into Apple Photos without the
+          nonsense.
         </p>
         <div className="flex items-center gap-4 mt-8">
           <a
@@ -94,6 +98,14 @@ export default function Home() {
         <p className="mt-3 text-xs text-neutral-600">
           Requires macOS 12+. Apple Silicon.
         </p>
+      </section>
+
+      {/* Screenshots */}
+      <section className="px-6 py-20 max-w-5xl mx-auto w-full">
+        <h2 className="text-2xl font-bold text-center mb-12 text-neutral-200">
+          See it in action
+        </h2>
+        <ScreenshotCarousel />
       </section>
 
       {/* Features */}
@@ -153,6 +165,36 @@ export default function Home() {
         >
           Download for macOS
         </a>
+      </section>
+
+      {/* Support */}
+      <section className="px-6 py-16 max-w-md mx-auto w-full text-center">
+        <p className="text-sm text-neutral-500 mb-4">
+          If this app saved you some headaches, you can buy me a coffee.
+        </p>
+        <div className="flex items-center justify-center gap-3 flex-wrap">
+          {/* TODO: Replace # with your Buy Me a Coffee URL */}
+          {/*
+          <a
+            href="https://buymeacoffee.com/yourusername"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-800 text-sm text-neutral-400 hover:text-neutral-200 hover:border-neutral-600 transition-colors"
+          >
+            ☕ Buy Me a Coffee
+          </a>
+          */}
+          <a
+            href="bitcoin:bc1ql4sjy9h60ea22rncaqn95zergef3mp62tjxgxf4wfljgz2dgs93sle6ptc"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-800 text-sm text-neutral-400 hover:text-neutral-200 hover:border-neutral-600 transition-colors"
+          >
+            ₿ Bitcoin
+          </a>
+          <a
+            href="lightning:purpleparrot1@primal.net"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-neutral-800 text-sm text-neutral-400 hover:text-neutral-200 hover:border-neutral-600 transition-colors"
+          >
+            ⚡ Lightning
+          </a>
+        </div>
       </section>
 
       {/* Footer */}
