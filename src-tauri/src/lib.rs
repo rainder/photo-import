@@ -7,13 +7,17 @@ use photos::PhotoMeta;
 use volumes::CameraVolume;
 
 #[tauri::command]
-fn list_photos(volume_path: String) -> Vec<PhotoMeta> {
-    photos::scan_dcim(&volume_path)
+async fn list_photos(volume_path: String) -> Result<Vec<PhotoMeta>, String> {
+    tokio::task::spawn_blocking(move || photos::scan_dcim(&volume_path))
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-fn get_thumbnail(path: String) -> Result<String, String> {
-    photos::get_thumbnail(&path)
+async fn get_thumbnail(path: String) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || photos::get_thumbnail(&path))
+        .await
+        .map_err(|e| e.to_string())?
 }
 
 #[tauri::command]

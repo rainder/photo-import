@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getThumbnail } from "../lib/commands";
+import { queueThumbnail, cancelPending } from "../lib/thumbnailQueue";
 
 interface ThumbnailProps {
   photo: { name: string; path: string };
@@ -22,14 +22,15 @@ export function Thumbnail({
 
   useEffect(() => {
     let cancelled = false;
-    getThumbnail(photo.path).then(
-      (b64) => {
-        if (!cancelled) setSrc(`data:image/jpeg;base64,${b64}`);
+    queueThumbnail(photo.path).then(
+      (dataUrl) => {
+        if (!cancelled) setSrc(dataUrl);
       },
       () => {}
     );
     return () => {
       cancelled = true;
+      cancelPending(photo.path);
     };
   }, [photo.path]);
 
