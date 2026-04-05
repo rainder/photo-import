@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Rounded square background -->
+  <rect x="0" y="0" width="1024" height="1024" rx="220" ry="220" fill="#4f46e5"/>
+
+  <!-- Camera body -->
+  <rect x="180" y="330" width="540" height="380" rx="44" ry="44" fill="white"/>
+
+  <!-- Camera top bump -->
+  <rect x="350" y="250" width="200" height="80" rx="16" ry="16" fill="white"/>
+
+  <!-- Connecting piece -->
+  <rect x="350" y="310" width="200" height="40" fill="white"/>
+
+  <!-- Lens circle outer -->
+  <circle cx="450" cy="510" r="130" fill="white" stroke="#c7d2fe" stroke-width="10"/>
+  <circle cx="450" cy="510" r="115" fill="#4f46e5"/>
+  <circle cx="450" cy="510" r="85" fill="#3730a3"/>
+  <circle cx="450" cy="510" r="55" fill="#1e1b4b"/>
+
+  <!-- Lens highlight -->
+  <circle cx="415" cy="475" r="20" fill="white" opacity="0.3"/>
+
+  <!-- Flash / indicator dot -->
+  <circle cx="640" cy="380" r="18" fill="#ef4444"/>
+
+  <!-- Download arrow circle - bottom right -->
+  <circle cx="720" cy="580" r="130" fill="#16a34a"/>
+
+  <!-- Arrow shaft -->
+  <rect x="696" y="505" width="48" height="80" rx="6" fill="white"/>
+  <!-- Arrow head -->
+  <polygon points="720,640 660,575 690,575 690,560 750,560 750,575 780,575" fill="white"/>
+  <!-- Tray line -->
+  <rect x="672" y="652" width="96" height="10" rx="5" fill="white" opacity="0.7"/>
+</svg>
