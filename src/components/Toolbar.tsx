@@ -1,4 +1,4 @@
-type SortBy = "name" | "date";
+type SortBy = "name-asc" | "name-desc" | "date-asc" | "date-desc";
 
 interface ToolbarProps {
   selectedCount: number;
@@ -36,8 +36,10 @@ export function Toolbar({
           value={sortBy}
           onChange={(e) => onSortChange(e.target.value as SortBy)}
         >
-          <option value="date">Sort: Date</option>
-          <option value="name">Sort: Name</option>
+          <option value="date-desc">Date ↓</option>
+          <option value="date-asc">Date ↑</option>
+          <option value="name-asc">Name A→Z</option>
+          <option value="name-desc">Name Z→A</option>
         </select>
         <label className="toolbar-grid-size">
           Grid

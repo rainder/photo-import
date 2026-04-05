@@ -94,15 +94,12 @@ export function Preview({
       </div>
 
       <div className="preview-bottombar">
-        <label className="preview-select-toggle">
-          <div
-            className={`thumbnail-checkbox ${isSelected ? "checked" : ""}`}
-            onClick={onToggleSelect}
-          >
-            {isSelected && "\u2713"}
-          </div>
+        <button className="preview-select-toggle" onClick={onToggleSelect}>
+          <span className={`preview-checkbox ${isSelected ? "checked" : ""}`}>
+            {isSelected && "✓"}
+          </span>
           <span>Select for import</span>
-        </label>
+        </button>
         <span className="preview-shortcuts">
           ← → navigate &nbsp;&nbsp; Space select &nbsp;&nbsp; Esc close
         </span>
