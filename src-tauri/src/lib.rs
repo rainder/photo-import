@@ -40,6 +40,16 @@ fn eject_volume(volume_path: String) -> Result<(), String> {
     volumes::eject_volume(&volume_path)
 }
 
+#[tauri::command]
+fn evict_thumbnail(path: String) {
+    photos::evict_thumbnail(&path);
+}
+
+#[tauri::command]
+fn clear_thumbnail_cache() {
+    photos::clear_thumbnail_cache();
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -52,7 +62,9 @@ pub fn run() {
             get_camera_volumes,
             import_to_photos,
             delete_from_card,
-            eject_volume
+            eject_volume,
+            evict_thumbnail,
+            clear_thumbnail_cache
         ])
         .setup(|app| {
             volumes::start_volume_watcher(app.handle().clone());

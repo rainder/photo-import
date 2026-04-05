@@ -13,7 +13,7 @@ import {
   type ImportProgress,
 } from "./components/ImportDialog";
 import { ImportReview } from "./components/ImportReview";
-import { importToPhotos, deleteFromCard, ejectVolume, type PhotoMeta } from "./lib/commands";
+import { importToPhotos, deleteFromCard, ejectVolume, evictThumbnail, clearThumbnailCache, type PhotoMeta } from "./lib/commands";
 import { open } from "@tauri-apps/plugin-dialog";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import "./App.css";
@@ -25,7 +25,7 @@ type SortBy = "name-asc" | "name-desc" | "date-asc" | "date-desc";
 export default function App() {
   const [autoDetect, setAutoDetect] = useState(true);
   const { volume, setManualVolume } = useSDCard(autoDetect);
-  const { photos: rawPhotos, loading, removePhoto, removePhotos } = usePhotos(volume?.path ?? null);
+  const { photos: rawPhotos, loading, removePhoto, removePhotos, reload } = usePhotos(volume?.path ?? null);
   const selection = useSelection();
   const gridRef = useRef<GridHandle>(null);
 
@@ -45,6 +45,7 @@ export default function App() {
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const [_importedPaths, setImportedPaths] = useState<Set<string>>(new Set());
   const [previewDeleteConfirm, setPreviewDeleteConfirm] = useState(false);
+  const [gridDeleteIndex, setGridDeleteIndex] = useState<number | null>(null);
   const [previewDirection, setPreviewDirection] = useState<1 | -1>(1);
 
   useEffect(() => {
@@ -62,11 +63,20 @@ export default function App() {
     }
   }, [focusedIndex, previewIndex]);
 
+  const prevVolumeRef = useRef(volume?.path);
   useEffect(() => {
-    if (rawPhotos.length > 0) {
-      setFocusedIndex(0);
+    if (volume?.path !== prevVolumeRef.current) {
+      prevVolumeRef.current = volume?.path;
+      if (rawPhotos.length > 0) {
+        setFocusedIndex(0);
+      }
     }
-  }, [rawPhotos]);
+  }, [rawPhotos, volume?.path]);
+
+  const handleReload = useCallback(() => {
+    clearThumbnailCache();
+    reload();
+  }, [reload]);
 
   const toggleAutoDetect = useCallback(() => {
     setAutoDetect((prev) => {
@@ -136,9 +146,35 @@ export default function App() {
     }));
   }, [photos, sortBy]);
 
+  const confirmGridDelete = useCallback(() => {
+    if (gridDeleteIndex === null) return;
+    const photo = photos[gridDeleteIndex];
+    if (!photo) return;
+    const remaining = photos.length - 1;
+    deleteFromCard([photo.path]).then(() => {
+      evictThumbnail(photo.path);
+      removePhoto(photo.path);
+      selection.removeMany([photo.path]);
+    });
+    setGridDeleteIndex(null);
+    setFocusedIndex(remaining > 0 ? Math.min(gridDeleteIndex, remaining - 1) : -1);
+  }, [gridDeleteIndex, photos, removePhoto, selection]);
+
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (previewIndex !== null || importStage !== null) return;
+
+      if (gridDeleteIndex !== null) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          confirmGridDelete();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          setGridDeleteIndex(null);
+        }
+        return;
+      }
+
       const lastIndex = photos.length - 1;
       switch (e.key) {
         case "Enter":
@@ -158,19 +194,19 @@ export default function App() {
           break;
         case "ArrowRight":
           e.preventDefault();
-          setFocusedIndex((prev) => Math.min(prev + 1, lastIndex));
+          setFocusedIndex((prev) => prev < 0 ? 0 : Math.min(prev + 1, lastIndex));
           break;
         case "ArrowLeft":
           e.preventDefault();
-          setFocusedIndex((prev) => Math.max(prev - 1, 0));
+          setFocusedIndex((prev) => prev < 0 ? 0 : Math.max(prev - 1, 0));
           break;
         case "ArrowDown":
           e.preventDefault();
-          setFocusedIndex((prev) => Math.min(prev + columnCount, lastIndex));
+          setFocusedIndex((prev) => prev < 0 ? 0 : Math.min(prev + columnCount, lastIndex));
           break;
         case "ArrowUp":
           e.preventDefault();
-          setFocusedIndex((prev) => Math.max(prev - columnCount, 0));
+          setFocusedIndex((prev) => prev < 0 ? 0 : Math.max(prev - columnCount, 0));
           break;
         case "=":
         case "+":
@@ -185,9 +221,31 @@ export default function App() {
             setColumnCount((prev) => Math.min(prev + 1, 8));
           }
           break;
+        case "Backspace":
+          if (e.metaKey && focusedIndex >= 0 && photos[focusedIndex]) {
+            e.preventDefault();
+            setGridDeleteIndex(focusedIndex);
+          }
+          break;
+        case "r":
+          if (e.metaKey) {
+            e.preventDefault();
+            handleReload();
+          }
+          break;
+        case "a":
+          if (e.metaKey) {
+            e.preventDefault();
+            if (e.shiftKey) {
+              selection.deselectAll();
+            } else {
+              selection.selectAll(photos.map((p) => p.path));
+            }
+          }
+          break;
       }
     },
-    [focusedIndex, previewIndex, importStage, photos, columnCount, selection]
+    [focusedIndex, previewIndex, importStage, gridDeleteIndex, confirmGridDelete, photos, columnCount, selection, handleReload]
   );
 
   const handlePreviewNavigate = useCallback(
@@ -197,8 +255,8 @@ export default function App() {
         if (prev === null) return null;
         const next = prev + delta;
         let resolved: number;
-        if (next < 0) resolved = photos.length - 1;
-        else if (next >= photos.length) resolved = 0;
+        if (next < 0) resolved = 0;
+        else if (next >= photos.length) resolved = photos.length - 1;
         else resolved = next;
         setFocusedIndex(resolved);
         return resolved;
@@ -237,6 +295,7 @@ export default function App() {
       setImportStage("deleting");
       const deletedPaths = new Set(succeeded);
       await deleteFromCard(Array.from(deletedPaths));
+      for (const p of deletedPaths) evictThumbnail(p);
       removePhotos(deletedPaths);
       selection.deselectAll();
       setImportStage("done");
@@ -250,12 +309,13 @@ export default function App() {
     setImportStage("deleting");
     const deletedPaths = new Set(selection.selected);
     await deleteFromCard(Array.from(deletedPaths));
+    for (const p of deletedPaths) evictThumbnail(p);
     removePhotos(deletedPaths);
     if (previewIndex !== null && photos[previewIndex] && deletedPaths.has(photos[previewIndex].path)) {
       setPreviewIndex(null);
     }
     selection.deselectAll();
-    setImportStage("done");
+    setImportStage(null);
   }, [selection, removePhotos, previewIndex, photos]);
 
   const handleDeleteSelected = useCallback(() => {
@@ -280,6 +340,7 @@ export default function App() {
     const photo = photos[previewIndex];
     if (!photo) return;
     deleteFromCard([photo.path]).then(() => {
+      evictThumbnail(photo.path);
       removePhoto(photo.path);
       selection.removeMany([photo.path]);
       const remaining = photos.length - 1;
@@ -323,6 +384,7 @@ export default function App() {
         onEject={() => {
           if (volume) ejectVolume(volume.path);
         }}
+        onReload={handleReload}
         onBrowse={async () => {
           const selected = await open({
             directory: true,
@@ -398,6 +460,19 @@ export default function App() {
           onDeleteConfirm={handlePreviewDeleteConfirm}
           onDeleteCancel={handlePreviewDeleteCancel}
         />
+      )}
+
+      {gridDeleteIndex !== null && photos[gridDeleteIndex] && (
+        <div className="dialog-overlay">
+          <div className="dialog">
+            <h3>Delete "{photos[gridDeleteIndex].name}" from SD card?</h3>
+            <p className="dialog-warning">This cannot be undone.</p>
+            <div className="dialog-actions">
+              <button className="dialog-btn secondary" onClick={() => setGridDeleteIndex(null)}>Cancel</button>
+              <button className="dialog-btn danger" onClick={confirmGridDelete}>Delete</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {importStage === "review" && (

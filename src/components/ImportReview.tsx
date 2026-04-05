@@ -193,8 +193,8 @@ export function ImportReview({
         if (prev === null) return null;
         const next = prev + delta;
         let resolved: number;
-        if (next < 0) resolved = photos.length - 1;
-        else if (next >= photos.length) resolved = 0;
+        if (next < 0) resolved = 0;
+        else if (next >= photos.length) resolved = photos.length - 1;
         else resolved = next;
         setFocusedIndex(resolved);
         return resolved;

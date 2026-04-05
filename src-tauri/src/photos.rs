@@ -85,6 +85,18 @@ pub fn get_thumbnail(path: &str) -> Result<String, String> {
     Ok(b64)
 }
 
+pub fn evict_thumbnail(path: &str) {
+    if let Ok(mut cache) = THUMBNAIL_CACHE.lock() {
+        cache.remove(path);
+    }
+}
+
+pub fn clear_thumbnail_cache() {
+    if let Ok(mut cache) = THUMBNAIL_CACHE.lock() {
+        cache.clear();
+    }
+}
+
 fn is_jpeg(path: &Path) -> bool {
     match path.extension().and_then(|e| e.to_str()) {
         Some(ext) => matches!(ext.to_lowercase().as_str(), "jpg" | "jpeg"),

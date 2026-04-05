@@ -144,23 +144,62 @@
 }
 
 .toolbar-select {
-  padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 6px;
   color: #e0e0e0;
   font-size: 12px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='rgba(255,255,255,0.4)' fill='none' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 24px;
+}
+
+.toolbar-select:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.toolbar-select:focus {
+  outline: none;
+  border-color: #6366f1;
 }
 
 .toolbar-grid-size {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.5);
 }
 
-.toolbar-grid-size input[type="range"] { width: 80px; }
+.toolbar-grid-size input[type="range"] {
+  width: 80px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  outline: none;
+}
+
+.toolbar-grid-size input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #a5b4fc;
+  cursor: pointer;
+  border: none;
+}
+
+.toolbar-grid-size input[type="range"]::-webkit-slider-thumb:hover {
+  background: #818cf8;
+}
 
 .grid-container {
   flex: 1;

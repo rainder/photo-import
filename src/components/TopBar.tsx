@@ -5,6 +5,7 @@ interface TopBarProps {
   onToggleAutoDetect: () => void;
   onEject: () => void;
   onBrowse: () => void;
+  onReload: () => void;
 }
 
 export function TopBar({
@@ -14,6 +15,7 @@ export function TopBar({
   onToggleAutoDetect,
   onEject,
   onBrowse,
+  onReload,
 }: TopBarProps) {
   return (
     <div className="topbar">
@@ -29,6 +31,9 @@ export function TopBar({
         )}
         <button className="topbar-browse" onClick={onBrowse}>
           Browse...
+        </button>
+        <button className="topbar-browse" onClick={onReload} title="Clear cache and reload (⌘R)">
+          ↻
         </button>
       </div>
       <div className="topbar-toggle">

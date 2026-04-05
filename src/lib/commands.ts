@@ -45,3 +45,11 @@ export async function deleteFromCard(paths: string[]): Promise<DeleteResult> {
 export async function ejectVolume(volumePath: string): Promise<void> {
   return invoke("eject_volume", { volumePath });
 }
+
+export async function evictThumbnail(path: string): Promise<void> {
+  return invoke("evict_thumbnail", { path });
+}
+
+export async function clearThumbnailCache(): Promise<void> {
+  return invoke("clear_thumbnail_cache");
+}

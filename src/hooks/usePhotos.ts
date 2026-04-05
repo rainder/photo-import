@@ -1,9 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { listPhotos, type PhotoMeta } from "../lib/commands";
 
 export function usePhotos(volumePath: string | null) {
   const [photos, setPhotos] = useState<PhotoMeta[]>([]);
   const [loading, setLoading] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const volumePathRef = useRef(volumePath);
+  volumePathRef.current = volumePath;
 
   useEffect(() => {
     if (!volumePath) {
@@ -34,7 +37,11 @@ export function usePhotos(volumePath: string | null) {
     return () => {
       cancelled = true;
     };
-  }, [volumePath]);
+  }, [volumePath, reloadKey]);
+
+  const reload = useCallback(() => {
+    setReloadKey((k) => k + 1);
+  }, []);
 
   const removePhoto = (path: string) => {
     setPhotos((prev) => prev.filter((p) => p.path !== path));
@@ -44,5 +51,5 @@ export function usePhotos(volumePath: string | null) {
     setPhotos((prev) => prev.filter((p) => !paths.has(p.path)));
   };
 
-  return { photos, loading, removePhoto, removePhotos };
+  return { photos, loading, removePhoto, removePhotos, reload };
 }

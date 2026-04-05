@@ -20,6 +20,25 @@ function formatSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function ordinal(day: number): string {
+  if (day > 3 && day < 21) return `${day}th`;
+  switch (day % 10) {
+    case 1: return `${day}st`;
+    case 2: return `${day}nd`;
+    case 3: return `${day}rd`;
+    default: return `${day}th`;
+  }
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  const day = ordinal(d.getDate());
+  const month = d.toLocaleString(undefined, { month: "long" });
+  const year = d.getFullYear();
+  const time = d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  return `${day} of ${month}, ${year} ${time}`;
+}
+
 export function Preview({
   photos,
   currentIndex,
@@ -82,7 +101,7 @@ export function Preview({
         <div className="preview-info">
           <span className="preview-filename">{photo.name}</span>
           <span className="preview-meta">
-            {formatSize(photo.size)} — {new Date(photo.date).toLocaleDateString()}
+            {formatSize(photo.size)} — {formatDate(photo.date)}
           </span>
         </div>
         <div className="preview-nav-info">
