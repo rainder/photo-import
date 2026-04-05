@@ -13,6 +13,7 @@ import {
   type ImportProgress,
 } from "./components/ImportDialog";
 import { importToPhotos, deleteFromCard, ejectVolume, type PhotoMeta } from "./lib/commands";
+import { open } from "@tauri-apps/plugin-dialog";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import "./App.css";
 
@@ -22,8 +23,8 @@ type SortBy = "name-asc" | "name-desc" | "date-asc" | "date-desc";
 
 export default function App() {
   const [autoDetect, setAutoDetect] = useState(true);
-  const { volume } = useSDCard(autoDetect);
-  const { photos: rawPhotos, loading } = usePhotos(volume?.path ?? null);
+  const { volume, setManualVolume } = useSDCard(autoDetect);
+  const { photos: rawPhotos, loading, removePhoto, removePhotos } = usePhotos(volume?.path ?? null);
   const selection = useSelection();
 
   const [sortBy, setSortBy] = useState<SortBy>("date-desc");
@@ -34,6 +35,8 @@ export default function App() {
   const [importStage, setImportStage] = useState<ImportStage | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
   const [_importedPaths, setImportedPaths] = useState<Set<string>>(new Set());
+  const [previewDeleteConfirm, setPreviewDeleteConfirm] = useState(false);
+  const [previewDirection, setPreviewDirection] = useState<1 | -1>(1);
 
   useEffect(() => {
     store.get<boolean>("autoDetect").then((val) => {
@@ -122,6 +125,7 @@ export default function App() {
 
   const handlePreviewNavigate = useCallback(
     (delta: number) => {
+      setPreviewDirection(delta > 0 ? 1 : -1);
       setPreviewIndex((prev) => {
         if (prev === null) return null;
         const next = prev + delta;
@@ -169,14 +173,62 @@ export default function App() {
       }
     } else if (importStage === "confirm-delete") {
       setImportStage("deleting");
-      await deleteFromCard(Array.from(selection.selected));
+      const deletedPaths = new Set(selection.selected);
+      await deleteFromCard(Array.from(deletedPaths));
+      removePhotos(deletedPaths);
+      if (previewIndex !== null && photos[previewIndex] && deletedPaths.has(photos[previewIndex].path)) {
+        setPreviewIndex(null);
+      }
+      selection.deselectAll();
       setImportStage("done");
     }
-  }, [importStage, selection.selected, deleteAfterImport]);
+  }, [importStage, selection, deleteAfterImport, removePhotos, previewIndex, photos]);
+
+  const handleDeleteSelected = useCallback(() => {
+    setImportStage("confirm-delete");
+  }, []);
 
   const handleImportCancel = useCallback(() => {
     setImportStage(null);
     setImportProgress(null);
+  }, []);
+
+  const doPreviewDelete = useCallback(() => {
+    if (previewIndex === null) return;
+    const photo = photos[previewIndex];
+    if (!photo) return;
+    deleteFromCard([photo.path]).then(() => {
+      removePhoto(photo.path);
+      selection.removeMany([photo.path]);
+      const remaining = photos.length - 1;
+      if (remaining === 0) {
+        setPreviewIndex(null);
+      } else if (previewDirection === 1) {
+        // Moving forward: stay at same index (next photo slides in)
+        // But clamp if we were at the end
+        setPreviewIndex(Math.min(previewIndex, remaining - 1));
+      } else {
+        // Moving backward: go to previous, or stay if at start
+        setPreviewIndex(Math.max(0, previewIndex - 1));
+      }
+    });
+  }, [previewIndex, photos, previewDirection, removePhoto, selection]);
+
+  const handlePreviewDelete = useCallback((skipConfirm: boolean) => {
+    if (skipConfirm) {
+      doPreviewDelete();
+    } else {
+      setPreviewDeleteConfirm(true);
+    }
+  }, [doPreviewDelete]);
+
+  const handlePreviewDeleteConfirm = useCallback(() => {
+    setPreviewDeleteConfirm(false);
+    doPreviewDelete();
+  }, [doPreviewDelete]);
+
+  const handlePreviewDeleteCancel = useCallback(() => {
+    setPreviewDeleteConfirm(false);
   }, []);
 
   return (
@@ -188,6 +240,18 @@ export default function App() {
         onToggleAutoDetect={toggleAutoDetect}
         onEject={() => {
           if (volume) ejectVolume(volume.path);
+        }}
+        onBrowse={async () => {
+          const selected = await open({
+            directory: true,
+            multiple: false,
+            title: "Select folder with photos",
+          });
+          if (selected) {
+            const path = typeof selected === "string" ? selected : selected;
+            const name = path.split("/").pop() ?? path;
+            setManualVolume({ name, path });
+          }
         }}
       />
       <Toolbar
@@ -214,6 +278,13 @@ export default function App() {
           onSelect={selection.toggle}
           onFocus={setFocusedIndex}
           onPreview={setPreviewIndex}
+          onSelectSection={(paths, allSelected) => {
+            if (allSelected) {
+              selection.removeMany(paths);
+            } else {
+              selection.addMany(paths);
+            }
+          }}
           columnCount={columnCount}
         />
       )}
@@ -223,6 +294,7 @@ export default function App() {
         deleteAfterImport={deleteAfterImport}
         onToggleDelete={() => setDeleteAfterImport((v) => !v)}
         onImport={handleImport}
+        onDeleteSelected={handleDeleteSelected}
         importing={importStage === "importing"}
       />
 
@@ -234,6 +306,10 @@ export default function App() {
           onClose={() => setPreviewIndex(null)}
           onNavigate={handlePreviewNavigate}
           onToggleSelect={() => selection.toggle(photos[previewIndex]?.path)}
+          onDelete={handlePreviewDelete}
+          deleteConfirm={previewDeleteConfirm}
+          onDeleteConfirm={handlePreviewDeleteConfirm}
+          onDeleteCancel={handlePreviewDeleteCancel}
         />
       )}
 

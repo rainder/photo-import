@@ -28,5 +28,9 @@ export function useSDCard(autoDetect: boolean) {
     };
   }, [autoDetect]);
 
-  return { volume };
+  const setManualVolume = (vol: CameraVolume | null) => {
+    setVolume(vol);
+  };
+
+  return { volume, setManualVolume };
 }

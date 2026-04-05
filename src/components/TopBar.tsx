@@ -4,6 +4,7 @@ interface TopBarProps {
   autoDetect: boolean;
   onToggleAutoDetect: () => void;
   onEject: () => void;
+  onBrowse: () => void;
 }
 
 export function TopBar({
@@ -12,6 +13,7 @@ export function TopBar({
   autoDetect,
   onToggleAutoDetect,
   onEject,
+  onBrowse,
 }: TopBarProps) {
   return (
     <div className="topbar">
@@ -25,6 +27,9 @@ export function TopBar({
             ⏏
           </button>
         )}
+        <button className="topbar-browse" onClick={onBrowse}>
+          Browse...
+        </button>
       </div>
       <div className="topbar-toggle">
         <span className="toggle-label">Auto-detect</span>

@@ -17,6 +17,7 @@ describe("Grid", () => {
         onSelect={() => {}}
         onFocus={() => {}}
         onPreview={() => {}}
+        onSelectSection={() => {}}
         columnCount={5}
       />
     );

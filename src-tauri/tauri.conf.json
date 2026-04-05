@@ -1,7 +1,7 @@
 {
-  "productName": "photo-importr",
+  "productName": "Photo Import",
   "version": "0.1.0",
-  "identifier": "com.photo-importr.app",
+  "identifier": "com.photo-import.app",
   "build": {
     "beforeBuildCommand": "npm run build",
     "beforeDevCommand": "npm run dev",
@@ -18,7 +18,7 @@
     },
     "windows": [
       {
-        "title": "Photo Importr",
+        "title": "Photo Import",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

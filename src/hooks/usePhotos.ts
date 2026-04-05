@@ -36,5 +36,13 @@ export function usePhotos(volumePath: string | null) {
     };
   }, [volumePath]);
 
-  return { photos, loading };
+  const removePhoto = (path: string) => {
+    setPhotos((prev) => prev.filter((p) => p.path !== path));
+  };
+
+  const removePhotos = (paths: Set<string>) => {
+    setPhotos((prev) => prev.filter((p) => !paths.has(p.path)));
+  };
+
+  return { photos, loading, removePhoto, removePhotos };
 }

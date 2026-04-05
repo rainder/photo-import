@@ -9,6 +9,10 @@ interface PreviewProps {
   onClose: () => void;
   onNavigate: (delta: number) => void;
   onToggleSelect: () => void;
+  onDelete: (skipConfirm: boolean) => void;
+  deleteConfirm: boolean;
+  onDeleteConfirm: () => void;
+  onDeleteCancel: () => void;
 }
 
 function formatSize(bytes: number): string {
@@ -23,11 +27,26 @@ export function Preview({
   onClose,
   onNavigate,
   onToggleSelect,
+  onDelete,
+  deleteConfirm,
+  onDeleteConfirm,
+  onDeleteCancel,
 }: PreviewProps) {
   const photo = photos[currentIndex];
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
+      if (deleteConfirm) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          onDeleteConfirm();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          onDeleteCancel();
+        }
+        return;
+      }
+
       switch (e.key) {
         case "Escape":
           onClose();
@@ -42,12 +61,16 @@ export function Preview({
           e.preventDefault();
           onToggleSelect();
           break;
+        case "Backspace":
+          e.preventDefault();
+          onDelete(e.metaKey);
+          break;
       }
     }
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, onNavigate, onToggleSelect]);
+  }, [onClose, onNavigate, onToggleSelect, onDelete, deleteConfirm, onDeleteConfirm, onDeleteCancel]);
 
   const imageSrc = convertFileSrc(photo.path);
 
@@ -101,9 +124,22 @@ export function Preview({
           <span>Select for import</span>
         </button>
         <span className="preview-shortcuts">
-          ← → navigate &nbsp;&nbsp; Space select &nbsp;&nbsp; Esc close
+          ← → navigate &nbsp;&nbsp; Space select &nbsp;&nbsp; ⌫ delete &nbsp;&nbsp; Esc close
         </span>
       </div>
+
+      {deleteConfirm && (
+        <div className="dialog-overlay">
+          <div className="dialog">
+            <h3>Delete "{photo.name}" from SD card?</h3>
+            <p className="dialog-warning">This cannot be undone.</p>
+            <div className="dialog-actions">
+              <button className="dialog-btn secondary" onClick={onDeleteCancel}>Cancel</button>
+              <button className="dialog-btn danger" onClick={onDeleteConfirm}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

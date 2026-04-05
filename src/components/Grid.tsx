@@ -16,11 +16,12 @@ interface GridProps {
   onSelect: (path: string) => void;
   onFocus: (index: number) => void;
   onPreview: (index: number) => void;
+  onSelectSection: (paths: string[], allSelected: boolean) => void;
   columnCount: number;
 }
 
 type Row =
-  | { type: "header"; label: string; photoCount: number }
+  | { type: "header"; label: string; photoCount: number; paths: string[]; allSelected: boolean }
   | { type: "photos"; items: (PhotoMeta | null)[]; startIndex: number };
 
 interface RowExtraProps {
@@ -31,6 +32,7 @@ interface RowExtraProps {
   onSelect: (path: string) => void;
   onFocus: (index: number) => void;
   onPreview: (index: number) => void;
+  onSelectSection: (paths: string[], allSelected: boolean) => void;
 }
 
 const HEADER_HEIGHT = 40;
@@ -50,12 +52,19 @@ function RowRenderer(props: {
     onSelect,
     onFocus,
     onPreview,
+    onSelectSection,
   } = props;
   const row = rows[index];
 
   if (row.type === "header") {
     return (
       <div style={style} className="grid-section-header">
+        <button
+          className={`section-checkbox ${row.allSelected ? "checked" : ""}`}
+          onClick={() => onSelectSection(row.paths, row.allSelected)}
+        >
+          {row.allSelected && "✓"}
+        </button>
         <span className="grid-section-date">{row.label}</span>
         <span className="grid-section-count">{row.photoCount}</span>
       </div>
@@ -92,6 +101,7 @@ export function Grid({
   onSelect,
   onFocus,
   onPreview,
+  onSelectSection,
   columnCount,
 }: GridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -123,10 +133,14 @@ export function Grid({
     let flatIndex = 0;
 
     for (const section of sections) {
+      const sectionPaths = section.photos.map((p) => p.path);
+      const allSelected = sectionPaths.length > 0 && sectionPaths.every((p) => isSelected(p));
       result.push({
         type: "header",
         label: section.label,
         photoCount: section.photos.length,
+        paths: sectionPaths,
+        allSelected,
       });
 
       for (let i = 0; i < section.photos.length; i += columnCount) {
@@ -141,7 +155,7 @@ export function Grid({
     }
 
     return result;
-  }, [sections, columnCount]);
+  }, [sections, columnCount, isSelected]);
 
   const getRowHeight = (index: number) => {
     return rows[index].type === "header" ? HEADER_HEIGHT : cellHeight;
@@ -156,8 +170,9 @@ export function Grid({
       onSelect,
       onFocus,
       onPreview,
+      onSelectSection,
     }),
-    [rows, cellWidth, isSelected, focusedIndex, onSelect, onFocus, onPreview]
+    [rows, cellWidth, isSelected, focusedIndex, onSelect, onFocus, onPreview, onSelectSection]
   );
 
   if (photos.length === 0) {

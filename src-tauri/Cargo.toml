@@ -27,6 +27,7 @@ img-parts = "0.3"
 base64 = "0.22"
 chrono = "0.4"
 tauri-plugin-store = "2"
+tauri-plugin-dialog = "2"
 tokio = { version = "1", features = ["rt"] }
 
 [dev-dependencies]

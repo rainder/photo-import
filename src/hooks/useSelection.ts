@@ -23,6 +23,22 @@ export function useSelection() {
     setSelected(new Set());
   }, []);
 
+  const addMany = useCallback((paths: string[]) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const p of paths) next.add(p);
+      return next;
+    });
+  }, []);
+
+  const removeMany = useCallback((paths: string[]) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      for (const p of paths) next.delete(p);
+      return next;
+    });
+  }, []);
+
   const isSelected = useCallback(
     (path: string) => selected.has(path),
     [selected]
@@ -34,6 +50,8 @@ export function useSelection() {
     toggle,
     selectAll,
     deselectAll,
+    addMany,
+    removeMany,
     isSelected,
   };
 }

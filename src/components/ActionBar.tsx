@@ -3,6 +3,7 @@ interface ActionBarProps {
   deleteAfterImport: boolean;
   onToggleDelete: () => void;
   onImport: () => void;
+  onDeleteSelected: () => void;
   importing: boolean;
 }
 
@@ -11,6 +12,7 @@ export function ActionBar({
   deleteAfterImport,
   onToggleDelete,
   onImport,
+  onDeleteSelected,
   importing,
 }: ActionBarProps) {
   return (
@@ -23,15 +25,24 @@ export function ActionBar({
         />
         Delete from SD card after import
       </label>
-      <button
-        className="actionbar-import-btn"
-        disabled={selectedCount === 0 || importing}
-        onClick={onImport}
-      >
-        {importing
-          ? "Importing..."
-          : `Import ${selectedCount} Photo${selectedCount !== 1 ? "s" : ""}`}
-      </button>
+      <div className="actionbar-buttons">
+        <button
+          className="actionbar-delete-btn"
+          disabled={selectedCount === 0 || importing}
+          onClick={onDeleteSelected}
+        >
+          Delete {selectedCount} Photo{selectedCount !== 1 ? "s" : ""}
+        </button>
+        <button
+          className="actionbar-import-btn"
+          disabled={selectedCount === 0 || importing}
+          onClick={onImport}
+        >
+          {importing
+            ? "Importing..."
+            : `Import ${selectedCount} Photo${selectedCount !== 1 ? "s" : ""}`}
+        </button>
+      </div>
     </div>
   );
 }
