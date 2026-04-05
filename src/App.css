@@ -43,6 +43,22 @@
   font-weight: 600;
 }
 
+.topbar-eject {
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  padding: 2px 6px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.topbar-eject:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: #e0e0e0;
+}
+
 .topbar-toggle {
   display: flex;
   align-items: center;

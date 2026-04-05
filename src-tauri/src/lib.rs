@@ -35,6 +35,11 @@ fn delete_from_card(paths: Vec<String>) -> DeleteResult {
     import::delete_from_card(&paths)
 }
 
+#[tauri::command]
+fn eject_volume(volume_path: String) -> Result<(), String> {
+    volumes::eject_volume(&volume_path)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -45,7 +50,8 @@ pub fn run() {
             get_thumbnail,
             get_camera_volumes,
             import_to_photos,
-            delete_from_card
+            delete_from_card,
+            eject_volume
         ])
         .setup(|app| {
             volumes::start_volume_watcher(app.handle().clone());

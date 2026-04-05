@@ -12,7 +12,7 @@ import {
   type ImportStage,
   type ImportProgress,
 } from "./components/ImportDialog";
-import { importToPhotos, deleteFromCard, type PhotoMeta } from "./lib/commands";
+import { importToPhotos, deleteFromCard, ejectVolume, type PhotoMeta } from "./lib/commands";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import "./App.css";
 
@@ -186,6 +186,9 @@ export default function App() {
         photoCount={photos.length}
         autoDetect={autoDetect}
         onToggleAutoDetect={toggleAutoDetect}
+        onEject={() => {
+          if (volume) ejectVolume(volume.path);
+        }}
       />
       <Toolbar
         selectedCount={selection.count}

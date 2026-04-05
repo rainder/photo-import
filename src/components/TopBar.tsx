@@ -3,6 +3,7 @@ interface TopBarProps {
   photoCount: number;
   autoDetect: boolean;
   onToggleAutoDetect: () => void;
+  onEject: () => void;
 }
 
 export function TopBar({
@@ -10,6 +11,7 @@ export function TopBar({
   photoCount,
   autoDetect,
   onToggleAutoDetect,
+  onEject,
 }: TopBarProps) {
   return (
     <div className="topbar">
@@ -18,6 +20,11 @@ export function TopBar({
         <span className="topbar-label">
           {volumeName ? `${volumeName} — ${photoCount} photos` : "No SD card detected"}
         </span>
+        {volumeName && (
+          <button className="topbar-eject" onClick={onEject} title="Eject SD card">
+            ⏏
+          </button>
+        )}
       </div>
       <div className="topbar-toggle">
         <span className="toggle-label">Auto-detect</span>

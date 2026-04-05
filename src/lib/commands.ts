@@ -41,3 +41,7 @@ export async function importToPhotos(paths: string[]): Promise<ImportResult> {
 export async function deleteFromCard(paths: string[]): Promise<DeleteResult> {
   return invoke("delete_from_card", { paths });
 }
+
+export async function ejectVolume(volumePath: string): Promise<void> {
+  return invoke("eject_volume", { volumePath });
+}

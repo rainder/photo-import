@@ -1,10 +1,25 @@
 use serde::Serialize;
 use std::fs;
 use std::path::Path;
+use std::process::Command;
 
 use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 use std::sync::mpsc;
 use tauri::{AppHandle, Emitter};
+
+pub fn eject_volume(volume_path: &str) -> Result<(), String> {
+    let output = Command::new("diskutil")
+        .args(["eject", volume_path])
+        .output()
+        .map_err(|e| format!("Failed to run diskutil: {}", e))?;
+
+    if output.status.success() {
+        Ok(())
+    } else {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Eject failed: {}", stderr.trim()))
+    }
+}
 
 #[derive(Debug, Clone, Serialize)]
 pub struct CameraVolume {
