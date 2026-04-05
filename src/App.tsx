@@ -491,7 +491,6 @@ export default function App() {
         <ImportDialog
           stage={importStage}
           photoCount={selection.count}
-          deleteAfterImport={deleteAfterImport}
           onConfirm={handleDeleteConfirm}
           onCancel={handleImportCancel}
           progress={importProgress}

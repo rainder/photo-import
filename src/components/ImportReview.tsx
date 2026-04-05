@@ -14,8 +14,6 @@ interface ImportReviewProps {
   onColumnCountChange: (count: number) => void;
 }
 
-const DEFAULT_COLUMN_COUNT = 6;
-
 interface RowExtraProps {
   photoRows: (PhotoMeta | null)[][];
   cellWidth: number;
@@ -66,7 +64,7 @@ export function ImportReview({
   onColumnCountChange,
 }: ImportReviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const listRef = useListRef();
+  const listRef = useListRef(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
   const initialPaths = useMemo(() => photos.map((p) => p.path), [photos]);
   const [selected, setSelected] = useState<Set<string>>(() => new Set(initialPaths));

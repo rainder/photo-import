@@ -9,7 +9,6 @@ export interface ImportProgress {
 interface ImportDialogProps {
   stage: ImportStage;
   photoCount: number;
-  deleteAfterImport: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   progress: ImportProgress | null;
@@ -18,7 +17,6 @@ interface ImportDialogProps {
 export function ImportDialog({
   stage,
   photoCount,
-  deleteAfterImport,
   onConfirm,
   onCancel,
   progress,

@@ -179,7 +179,7 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
     [rows, cellWidth, isSelected, focusedIndex, onSelect, onFocus, onPreview, onSelectSection]
   );
 
-  const listRef = useListRef();
+  const listRef = useListRef(null);
 
   const flatIndexToRowIndex = useCallback((flatIndex: number): number => {
     let accumulated = 0;

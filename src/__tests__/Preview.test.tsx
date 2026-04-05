@@ -13,65 +13,42 @@ describe("Preview", () => {
     { name: "IMG_0002.JPG", path: "/a/IMG_0002.JPG", size: 6291456, date: "2026-03-28T10:05:00Z" },
   ];
 
+  const defaultProps = {
+    photos: mockPhotos,
+    currentIndex: 0,
+    isSelected: false,
+    onClose: () => {},
+    onNavigate: () => {},
+    onToggleSelect: () => {},
+    onDelete: () => {},
+    deleteConfirm: false,
+    onDeleteConfirm: () => {},
+    onDeleteCancel: () => {},
+  };
+
   it("shows filename and position", () => {
-    render(
-      <Preview
-        photos={mockPhotos}
-        currentIndex={0}
-        isSelected={false}
-        onClose={() => {}}
-        onNavigate={() => {}}
-        onToggleSelect={() => {}}
-      />
-    );
+    render(<Preview {...defaultProps} />);
     expect(screen.getByText("IMG_0001.JPG")).toBeTruthy();
     expect(screen.getByText(/1 of 2/)).toBeTruthy();
   });
 
   it("calls onClose when Esc is pressed", () => {
     const onClose = vi.fn();
-    render(
-      <Preview
-        photos={mockPhotos}
-        currentIndex={0}
-        isSelected={false}
-        onClose={onClose}
-        onNavigate={() => {}}
-        onToggleSelect={() => {}}
-      />
-    );
+    render(<Preview {...defaultProps} onClose={onClose} />);
     fireEvent.keyDown(document, { key: "Escape" });
     expect(onClose).toHaveBeenCalled();
   });
 
   it("calls onNavigate with +1 on ArrowRight", () => {
     const onNavigate = vi.fn();
-    render(
-      <Preview
-        photos={mockPhotos}
-        currentIndex={0}
-        isSelected={false}
-        onClose={() => {}}
-        onNavigate={onNavigate}
-        onToggleSelect={() => {}}
-      />
-    );
+    render(<Preview {...defaultProps} onNavigate={onNavigate} />);
     fireEvent.keyDown(document, { key: "ArrowRight" });
     expect(onNavigate).toHaveBeenCalledWith(1);
   });
 
   it("calls onToggleSelect on Space", () => {
     const onToggle = vi.fn();
-    render(
-      <Preview
-        photos={mockPhotos}
-        currentIndex={0}
-        isSelected={false}
-        onClose={() => {}}
-        onNavigate={() => {}}
-        onToggleSelect={onToggle}
-      />
-    );
+    render(<Preview {...defaultProps} onToggleSelect={onToggle} />);
     fireEvent.keyDown(document, { key: " " });
     expect(onToggle).toHaveBeenCalled();
   });
