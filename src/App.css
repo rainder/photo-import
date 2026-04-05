@@ -385,6 +385,7 @@
   justify-content: center;
   position: relative;
   min-height: 0;
+  overflow: hidden;
 }
 
 .preview-image {

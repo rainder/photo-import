@@ -6,6 +6,17 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "0.1.1",
+    date: "2026-04-05",
+    changes: [
+      "Pinch-to-zoom in preview mode with trackpad gesture support",
+      "Zoom toward cursor position for precise control",
+      "Double-click to toggle between 1x and 3x zoom",
+      "Drag to pan when zoomed in",
+      "Fix double-click on thumbnail no longer toggling selection",
+    ],
+  },
+  {
     version: "0.1.0",
     date: "2026-04-05",
     changes: [

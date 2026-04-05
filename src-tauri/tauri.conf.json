@@ -1,6 +1,6 @@
 {
   "productName": "Photo Import",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "identifier": "com.photo-import.app",
   "build": {
     "beforeBuildCommand": "npm run build",

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { PhotoMeta } from "../lib/commands";
 import { convertFileSrc } from "@tauri-apps/api/core";
 
@@ -52,6 +52,116 @@ export function Preview({
   onDeleteCancel,
 }: PreviewProps) {
   const photo = photos[currentIndex];
+  const [, forceRender] = useState(0);
+  const zoomRef = useRef(1);
+  const panRef = useRef({ x: 0, y: 0 });
+  const isPanning = useRef(false);
+  const lastPos = useRef({ x: 0, y: 0 });
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const gestureBaseZoom = useRef(1);
+
+  const update = useCallback(() => forceRender((n) => n + 1), []);
+
+  const clampAndApply = useCallback((newZoom: number, newPan: { x: number; y: number }) => {
+    zoomRef.current = Math.min(10, Math.max(1, newZoom));
+    if (zoomRef.current <= 1) {
+      panRef.current = { x: 0, y: 0 };
+    } else {
+      panRef.current = newPan;
+    }
+    update();
+  }, [update]);
+
+  // Zoom toward a point: keeps the point under cursor fixed
+  const zoomToward = useCallback((newZoom: number, clientX: number, clientY: number) => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    // Cursor position relative to container center
+    const cx = clientX - rect.left - rect.width / 2;
+    const cy = clientY - rect.top - rect.height / 2;
+    const oldZoom = zoomRef.current;
+    const clamped = Math.min(10, Math.max(1, newZoom));
+    const ratio = 1 - clamped / oldZoom;
+    const newPan = {
+      x: panRef.current.x + (cx - panRef.current.x) * ratio,
+      y: panRef.current.y + (cy - panRef.current.y) * ratio,
+    };
+    clampAndApply(clamped, newPan);
+  }, [clampAndApply]);
+
+  // Reset zoom/pan on photo change
+  useEffect(() => {
+    zoomRef.current = 1;
+    panRef.current = { x: 0, y: 0 };
+    update();
+  }, [currentIndex, update]);
+
+  // Pinch-to-zoom via wheel/gesture events
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+
+    function handleWheel(e: WheelEvent) {
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        const newZoom = zoomRef.current - e.deltaY * 0.01;
+        zoomToward(newZoom, e.clientX, e.clientY);
+      }
+    }
+
+    function handleGestureStart(e: Event) {
+      e.preventDefault();
+      gestureBaseZoom.current = zoomRef.current;
+    }
+    function handleGestureChange(e: Event) {
+      e.preventDefault();
+      const ge = e as unknown as { scale: number; clientX: number; clientY: number };
+      const newZoom = gestureBaseZoom.current * ge.scale;
+      zoomToward(newZoom, ge.clientX, ge.clientY);
+    }
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    el.addEventListener("gesturestart", handleGestureStart);
+    el.addEventListener("gesturechange", handleGestureChange);
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+      el.removeEventListener("gesturestart", handleGestureStart);
+      el.removeEventListener("gesturechange", handleGestureChange);
+    };
+  }, [zoomToward]);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (zoomRef.current <= 1) return;
+    isPanning.current = true;
+    lastPos.current = { x: e.clientX, y: e.clientY };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, []);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isPanning.current) return;
+    const dx = e.clientX - lastPos.current.x;
+    const dy = e.clientY - lastPos.current.y;
+    lastPos.current = { x: e.clientX, y: e.clientY };
+    panRef.current = { x: panRef.current.x + dx, y: panRef.current.y + dy };
+    update();
+  }, [update]);
+
+  const handlePointerUp = useCallback(() => {
+    isPanning.current = false;
+  }, []);
+
+  // Double-click to toggle zoom toward cursor
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    if (zoomRef.current > 1) {
+      clampAndApply(1, { x: 0, y: 0 });
+    } else {
+      zoomToward(3, e.clientX, e.clientY);
+    }
+  }, [clampAndApply, zoomToward]);
+
+  const zoom = zoomRef.current;
+  const pan = panRef.current;
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -114,7 +224,15 @@ export function Preview({
         </div>
       </div>
 
-      <div className="preview-body">
+      <div
+        className="preview-body"
+        ref={bodyRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onDoubleClick={handleDoubleClick}
+        style={{ cursor: zoom > 1 ? (isPanning.current ? "grabbing" : "grab") : "default" }}
+      >
         <button
           className="preview-arrow preview-arrow-left"
           onClick={() => onNavigate(-1)}
@@ -127,6 +245,10 @@ export function Preview({
           src={imageSrc}
           alt={photo.name}
           draggable={false}
+          style={{
+            transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+            transition: isPanning.current ? "none" : "transform 0.15s ease-out",
+          }}
         />
 
         <button

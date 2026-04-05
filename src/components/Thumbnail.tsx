@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { queueThumbnail, cancelPending } from "../lib/thumbnailQueue";
 
 interface ThumbnailProps {
@@ -19,6 +19,7 @@ export function Thumbnail({
   onPreview,
 }: ThumbnailProps) {
   const [src, setSrc] = useState<string | null>(null);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,7 +41,15 @@ export function Thumbnail({
       onClick={(e) => {
         e.stopPropagation();
         onFocus();
-        onSelect();
+        if (clickTimer.current) {
+          clearTimeout(clickTimer.current);
+          clickTimer.current = null;
+        } else {
+          clickTimer.current = setTimeout(() => {
+            clickTimer.current = null;
+            onSelect();
+          }, 200);
+        }
       }}
       onDoubleClick={onPreview}
     >
