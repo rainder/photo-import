@@ -1,4 +1,4 @@
-export type ImportStage = "confirm" | "importing" | "confirm-delete" | "deleting" | "done";
+export type ImportStage = "review" | "importing" | "confirm-delete" | "deleting" | "done";
 
 export interface ImportProgress {
   current: number;
@@ -26,21 +26,6 @@ export function ImportDialog({
   return (
     <div className="dialog-overlay">
       <div className="dialog">
-        {stage === "confirm" && (
-          <>
-            <h3>Import {photoCount} photos into Photos?</h3>
-            {deleteAfterImport && (
-              <p className="dialog-note">
-                Photos will be deleted from SD card after import.
-              </p>
-            )}
-            <div className="dialog-actions">
-              <button className="dialog-btn secondary" onClick={onCancel}>Cancel</button>
-              <button className="dialog-btn primary" onClick={onConfirm}>Import</button>
-            </div>
-          </>
-        )}
-
         {stage === "importing" && progress && (
           <>
             <h3>Importing photos...</h3>

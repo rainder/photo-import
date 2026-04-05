@@ -48,7 +48,9 @@ export function Preview({
       }
 
       switch (e.key) {
+        case "Enter":
         case "Escape":
+          e.preventDefault();
           onClose();
           break;
         case "ArrowLeft":
@@ -124,7 +126,7 @@ export function Preview({
           <span>Select for import</span>
         </button>
         <span className="preview-shortcuts">
-          ← → navigate &nbsp;&nbsp; Space select &nbsp;&nbsp; ⌫ delete &nbsp;&nbsp; Esc close
+          ← → navigate &nbsp;&nbsp; Space select &nbsp;&nbsp; ⌫ delete &nbsp;&nbsp; Enter close
         </span>
       </div>
 

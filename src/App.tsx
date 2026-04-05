@@ -1,10 +1,10 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { useSelection } from "./hooks/useSelection";
 import { usePhotos } from "./hooks/usePhotos";
 import { useSDCard } from "./hooks/useSDCard";
 import { TopBar } from "./components/TopBar";
 import { Toolbar } from "./components/Toolbar";
-import { Grid, type PhotoSection } from "./components/Grid";
+import { Grid, type PhotoSection, type GridHandle } from "./components/Grid";
 import { Preview } from "./components/Preview";
 import { ActionBar } from "./components/ActionBar";
 import {
@@ -12,6 +12,7 @@ import {
   type ImportStage,
   type ImportProgress,
 } from "./components/ImportDialog";
+import { ImportReview } from "./components/ImportReview";
 import { importToPhotos, deleteFromCard, ejectVolume, type PhotoMeta } from "./lib/commands";
 import { open } from "@tauri-apps/plugin-dialog";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -26,6 +27,7 @@ export default function App() {
   const { volume, setManualVolume } = useSDCard(autoDetect);
   const { photos: rawPhotos, loading, removePhoto, removePhotos } = usePhotos(volume?.path ?? null);
   const selection = useSelection();
+  const gridRef = useRef<GridHandle>(null);
 
   const [sortBy, setSortBy] = useState<SortBy>("date-desc");
   const [columnCount, setColumnCount] = useState(5);
@@ -43,6 +45,18 @@ export default function App() {
       if (val !== null && val !== undefined) setAutoDetect(val);
     });
   }, []);
+
+  useEffect(() => {
+    if (focusedIndex >= 0 && previewIndex === null) {
+      gridRef.current?.scrollToPhoto(focusedIndex);
+    }
+  }, [focusedIndex, previewIndex]);
+
+  useEffect(() => {
+    if (rawPhotos.length > 0) {
+      setFocusedIndex(0);
+    }
+  }, [rawPhotos]);
 
   const toggleAutoDetect = useCallback(() => {
     setAutoDetect((prev) => {
@@ -115,12 +129,42 @@ export default function App() {
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (previewIndex !== null) return;
-      if (e.key === " " && focusedIndex >= 0) {
-        e.preventDefault();
-        setPreviewIndex(focusedIndex);
+      const lastIndex = photos.length - 1;
+      switch (e.key) {
+        case "Enter":
+          e.preventDefault();
+          e.stopPropagation();
+          if (e.metaKey && selection.count > 0) {
+            setImportStage("review");
+          } else if (focusedIndex >= 0) {
+            setPreviewIndex(focusedIndex);
+          }
+          break;
+        case " ":
+          e.preventDefault();
+          if (focusedIndex >= 0 && photos[focusedIndex]) {
+            selection.toggle(photos[focusedIndex].path);
+          }
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          setFocusedIndex((prev) => Math.min(prev + 1, lastIndex));
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          setFocusedIndex((prev) => Math.max(prev - 1, 0));
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          setFocusedIndex((prev) => Math.min(prev + columnCount, lastIndex));
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setFocusedIndex((prev) => Math.max(prev - columnCount, 0));
+          break;
       }
     },
-    [focusedIndex, previewIndex]
+    [focusedIndex, previewIndex, photos, columnCount, selection]
   );
 
   const handlePreviewNavigate = useCallback(
@@ -129,64 +173,72 @@ export default function App() {
       setPreviewIndex((prev) => {
         if (prev === null) return null;
         const next = prev + delta;
-        if (next < 0) return photos.length - 1;
-        if (next >= photos.length) return 0;
-        return next;
+        let resolved: number;
+        if (next < 0) resolved = photos.length - 1;
+        else if (next >= photos.length) resolved = 0;
+        else resolved = next;
+        setFocusedIndex(resolved);
+        return resolved;
       });
     },
     [photos.length]
   );
 
   const handleImport = useCallback(() => {
-    setImportStage("confirm");
+    setImportStage("review");
   }, []);
 
-  const handleImportConfirm = useCallback(async () => {
-    const paths = Array.from(selection.selected);
+  const handleReviewConfirm = useCallback(async (paths: string[]) => {
+    setImportStage("importing");
 
-    if (importStage === "confirm") {
-      setImportStage("importing");
-
-      const succeeded: string[] = [];
-      for (let i = 0; i < paths.length; i++) {
-        setImportProgress({
-          current: i + 1,
-          total: paths.length,
-          currentFile: paths[i].split("/").pop() ?? paths[i],
-        });
-        const result = await importToPhotos([paths[i]]);
-        if (result.succeeded.length > 0) {
-          succeeded.push(paths[i]);
-        }
-      }
-
-      setImportedPaths((prev) => {
-        const next = new Set(prev);
-        succeeded.forEach((p) => next.add(p));
-        return next;
+    const succeeded: string[] = [];
+    for (let i = 0; i < paths.length; i++) {
+      setImportProgress({
+        current: i + 1,
+        total: paths.length,
+        currentFile: paths[i].split("/").pop() ?? paths[i],
       });
-
-      if (deleteAfterImport && succeeded.length > 0) {
-        setImportStage("confirm-delete");
-      } else {
-        setImportStage("done");
+      const result = await importToPhotos([paths[i]]);
+      if (result.succeeded.length > 0) {
+        succeeded.push(paths[i]);
       }
-    } else if (importStage === "confirm-delete") {
+    }
+
+    setImportedPaths((prev) => {
+      const next = new Set(prev);
+      succeeded.forEach((p) => next.add(p));
+      return next;
+    });
+
+    if (deleteAfterImport && succeeded.length > 0) {
       setImportStage("deleting");
-      const deletedPaths = new Set(selection.selected);
+      const deletedPaths = new Set(succeeded);
       await deleteFromCard(Array.from(deletedPaths));
       removePhotos(deletedPaths);
-      if (previewIndex !== null && photos[previewIndex] && deletedPaths.has(photos[previewIndex].path)) {
-        setPreviewIndex(null);
-      }
+      selection.deselectAll();
+      setImportStage("done");
+    } else {
       selection.deselectAll();
       setImportStage("done");
     }
-  }, [importStage, selection, deleteAfterImport, removePhotos, previewIndex, photos]);
+  }, [deleteAfterImport, removePhotos, selection]);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    setImportStage("deleting");
+    const deletedPaths = new Set(selection.selected);
+    await deleteFromCard(Array.from(deletedPaths));
+    removePhotos(deletedPaths);
+    if (previewIndex !== null && photos[previewIndex] && deletedPaths.has(photos[previewIndex].path)) {
+      setPreviewIndex(null);
+    }
+    selection.deselectAll();
+    setImportStage("done");
+  }, [selection, removePhotos, previewIndex, photos]);
 
   const handleDeleteSelected = useCallback(() => {
     setImportStage("confirm-delete");
   }, []);
+
 
   const handleImportCancel = useCallback(() => {
     setImportStage(null);
@@ -271,6 +323,7 @@ export default function App() {
         </div>
       ) : (
         <Grid
+          ref={gridRef}
           sections={sections}
           photos={photos}
           isSelected={selection.isSelected}
@@ -291,8 +344,6 @@ export default function App() {
 
       <ActionBar
         selectedCount={selection.count}
-        deleteAfterImport={deleteAfterImport}
-        onToggleDelete={() => setDeleteAfterImport((v) => !v)}
         onImport={handleImport}
         onDeleteSelected={handleDeleteSelected}
         importing={importStage === "importing"}
@@ -303,7 +354,13 @@ export default function App() {
           photos={photos}
           currentIndex={previewIndex}
           isSelected={selection.isSelected(photos[previewIndex]?.path)}
-          onClose={() => setPreviewIndex(null)}
+          onClose={() => {
+            const idx = previewIndex;
+            setPreviewIndex(null);
+            if (idx !== null) {
+              requestAnimationFrame(() => gridRef.current?.scrollToPhoto(idx));
+            }
+          }}
           onNavigate={handlePreviewNavigate}
           onToggleSelect={() => selection.toggle(photos[previewIndex]?.path)}
           onDelete={handlePreviewDelete}
@@ -313,12 +370,22 @@ export default function App() {
         />
       )}
 
-      {importStage && (
+      {importStage === "review" && (
+        <ImportReview
+          photos={photos.filter((p) => selection.isSelected(p.path))}
+          deleteAfterImport={deleteAfterImport}
+          onToggleDelete={() => setDeleteAfterImport((v) => !v)}
+          onConfirm={handleReviewConfirm}
+          onCancel={handleImportCancel}
+        />
+      )}
+
+      {importStage && importStage !== "review" && (
         <ImportDialog
           stage={importStage}
           photoCount={selection.count}
           deleteAfterImport={deleteAfterImport}
-          onConfirm={handleImportConfirm}
+          onConfirm={handleDeleteConfirm}
           onCancel={handleImportCancel}
           progress={importProgress}
         />

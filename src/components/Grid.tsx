@@ -1,5 +1,5 @@
-import { useRef, useState, useEffect, useMemo } from "react";
-import { List } from "react-window";
+import { useRef, useState, useEffect, useMemo, useCallback, useImperativeHandle, forwardRef } from "react";
+import { List, useListRef } from "react-window";
 import type { PhotoMeta } from "../lib/commands";
 import { Thumbnail } from "./Thumbnail";
 
@@ -93,7 +93,11 @@ function RowRenderer(props: {
   );
 }
 
-export function Grid({
+export interface GridHandle {
+  scrollToPhoto: (flatIndex: number) => void;
+}
+
+export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   sections,
   photos,
   isSelected,
@@ -103,7 +107,7 @@ export function Grid({
   onPreview,
   onSelectSection,
   columnCount,
-}: GridProps) {
+}, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
 
@@ -175,6 +179,31 @@ export function Grid({
     [rows, cellWidth, isSelected, focusedIndex, onSelect, onFocus, onPreview, onSelectSection]
   );
 
+  const listRef = useListRef();
+
+  const flatIndexToRowIndex = useCallback((flatIndex: number): number => {
+    let accumulated = 0;
+    let rowIdx = 0;
+    for (const section of sections) {
+      rowIdx++; // header
+      const sectionRows = Math.ceil(section.photos.length / columnCount);
+      if (flatIndex < accumulated + section.photos.length) {
+        const offsetInSection = flatIndex - accumulated;
+        return rowIdx + Math.floor(offsetInSection / columnCount);
+      }
+      accumulated += section.photos.length;
+      rowIdx += sectionRows;
+    }
+    return 0;
+  }, [sections, columnCount]);
+
+  useImperativeHandle(ref, () => ({
+    scrollToPhoto(flatIndex: number) {
+      const rowIndex = flatIndexToRowIndex(flatIndex);
+      listRef.current?.scrollToRow({ index: rowIndex, align: "smart", behavior: "smooth" });
+    },
+  }), [flatIndexToRowIndex, listRef]);
+
   if (photos.length === 0) {
     return (
       <div className="grid-empty">
@@ -186,6 +215,7 @@ export function Grid({
   return (
     <div className="grid-container" ref={containerRef}>
       <List<RowExtraProps>
+        listRef={listRef}
         defaultHeight={dimensions.height}
         rowComponent={RowRenderer}
         rowCount={rows.length}
@@ -196,4 +226,4 @@ export function Grid({
       />
     </div>
   );
-}
+});

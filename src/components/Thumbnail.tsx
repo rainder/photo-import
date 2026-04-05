@@ -40,6 +40,7 @@ export function Thumbnail({
       onClick={(e) => {
         e.stopPropagation();
         onFocus();
+        onSelect();
       }}
       onDoubleClick={onPreview}
     >

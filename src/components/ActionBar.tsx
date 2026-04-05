@@ -1,7 +1,5 @@
 interface ActionBarProps {
   selectedCount: number;
-  deleteAfterImport: boolean;
-  onToggleDelete: () => void;
   onImport: () => void;
   onDeleteSelected: () => void;
   importing: boolean;
@@ -9,29 +7,22 @@ interface ActionBarProps {
 
 export function ActionBar({
   selectedCount,
-  deleteAfterImport,
-  onToggleDelete,
   onImport,
   onDeleteSelected,
   importing,
 }: ActionBarProps) {
   return (
     <div className="actionbar">
-      <label className="actionbar-delete-toggle">
-        <input
-          type="checkbox"
-          checked={deleteAfterImport}
-          onChange={onToggleDelete}
-        />
-        Delete from SD card after import
-      </label>
+      <span className="actionbar-shortcuts">
+        ← → ↑ ↓ navigate &nbsp;&nbsp; Space select &nbsp;&nbsp; Enter preview &nbsp;&nbsp; ⌘Enter review
+      </span>
       <div className="actionbar-buttons">
         <button
           className="actionbar-delete-btn"
           disabled={selectedCount === 0 || importing}
           onClick={onDeleteSelected}
         >
-          Delete {selectedCount} Photo{selectedCount !== 1 ? "s" : ""}
+          Delete
         </button>
         <button
           className="actionbar-import-btn"
@@ -40,7 +31,7 @@ export function ActionBar({
         >
           {importing
             ? "Importing..."
-            : `Import ${selectedCount} Photo${selectedCount !== 1 ? "s" : ""}`}
+            : "Review"}
         </button>
       </div>
     </div>
