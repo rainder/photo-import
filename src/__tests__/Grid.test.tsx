@@ -10,6 +10,7 @@ describe("Grid", () => {
   it("renders empty state when no photos", () => {
     render(
       <Grid
+        sections={[]}
         photos={[]}
         isSelected={() => false}
         focusedIndex={-1}

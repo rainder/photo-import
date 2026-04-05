@@ -4,7 +4,7 @@ import { usePhotos } from "./hooks/usePhotos";
 import { useSDCard } from "./hooks/useSDCard";
 import { TopBar } from "./components/TopBar";
 import { Toolbar } from "./components/Toolbar";
-import { Grid } from "./components/Grid";
+import { Grid, type PhotoSection } from "./components/Grid";
 import { Preview } from "./components/Preview";
 import { ActionBar } from "./components/ActionBar";
 import {
@@ -12,13 +12,13 @@ import {
   type ImportStage,
   type ImportProgress,
 } from "./components/ImportDialog";
-import { importToPhotos, deleteFromCard } from "./lib/commands";
+import { importToPhotos, deleteFromCard, type PhotoMeta } from "./lib/commands";
 import { LazyStore } from "@tauri-apps/plugin-store";
 import "./App.css";
 
 const store = new LazyStore("config.json");
 
-type SortBy = "name" | "date";
+type SortBy = "name-asc" | "name-desc" | "date-asc" | "date-desc";
 
 export default function App() {
   const [autoDetect, setAutoDetect] = useState(true);
@@ -26,7 +26,7 @@ export default function App() {
   const { photos: rawPhotos, loading } = usePhotos(volume?.path ?? null);
   const selection = useSelection();
 
-  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [sortBy, setSortBy] = useState<SortBy>("date-desc");
   const [columnCount, setColumnCount] = useState(5);
   const [focusedIndex, setFocusedIndex] = useState(-1);
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
@@ -51,13 +51,63 @@ export default function App() {
 
   const photos = useMemo(() => {
     const sorted = [...rawPhotos];
-    if (sortBy === "name") {
-      sorted.sort((a, b) => a.name.localeCompare(b.name));
-    } else {
-      sorted.sort((a, b) => a.date.localeCompare(b.date));
+    switch (sortBy) {
+      case "name-asc":
+        sorted.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      case "name-desc":
+        sorted.sort((a, b) => b.name.localeCompare(a.name));
+        break;
+      case "date-asc":
+        sorted.sort((a, b) => a.date.localeCompare(b.date));
+        break;
+      case "date-desc":
+        sorted.sort((a, b) => b.date.localeCompare(a.date));
+        break;
     }
     return sorted;
   }, [rawPhotos, sortBy]);
+
+  const sections = useMemo((): PhotoSection[] => {
+    if (sortBy.startsWith("name")) {
+      // When sorting by name, group by first letter
+      const groups = new Map<string, PhotoMeta[]>();
+      for (const photo of photos) {
+        const letter = photo.name[0]?.toUpperCase() ?? "#";
+        let group = groups.get(letter);
+        if (!group) {
+          group = [];
+          groups.set(letter, group);
+        }
+        group.push(photo);
+      }
+      return Array.from(groups, ([letter, items]) => ({
+        label: letter,
+        photos: items,
+      }));
+    }
+
+    // When sorting by date, group by calendar date
+    const groups = new Map<string, PhotoMeta[]>();
+    for (const photo of photos) {
+      const dateKey = photo.date ? new Date(photo.date).toLocaleDateString(undefined, {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }) : "Unknown Date";
+      let group = groups.get(dateKey);
+      if (!group) {
+        group = [];
+        groups.set(dateKey, group);
+      }
+      group.push(photo);
+    }
+    return Array.from(groups, ([date, items]) => ({
+      label: date,
+      photos: items,
+    }));
+  }, [photos, sortBy]);
 
   const handleGridKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -154,6 +204,7 @@ export default function App() {
         </div>
       ) : (
         <Grid
+          sections={sections}
           photos={photos}
           isSelected={selection.isSelected}
           focusedIndex={focusedIndex}
