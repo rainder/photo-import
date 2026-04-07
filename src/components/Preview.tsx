@@ -21,6 +21,9 @@ interface PreviewProps {
   burstMembers?: PhotoMeta[];
   burstViewIndex: number;
   onBurstNavigate: (index: number) => void;
+  burstFocused: boolean;
+  onBurstEnter: () => void;
+  onBurstExit: () => void;
   isPathSelected?: (path: string) => boolean;
 }
 
@@ -71,6 +74,9 @@ export function Preview({
   burstMembers,
   burstViewIndex,
   onBurstNavigate,
+  burstFocused,
+  onBurstEnter,
+  onBurstExit,
   isPathSelected,
 }: PreviewProps) {
   const photo = currentPhoto;
@@ -217,6 +223,14 @@ export function Preview({
         case "ArrowRight":
           onNavigate(1);
           break;
+        case "ArrowDown":
+          e.preventDefault();
+          onBurstEnter();
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          onBurstExit();
+          break;
         case " ":
           e.preventDefault();
           onToggleSelect();
@@ -230,7 +244,7 @@ export function Preview({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose, onNavigate, onToggleSelect, onDelete, deleteConfirm, onDeleteConfirm, onDeleteCancel]);
+  }, [onClose, onNavigate, onToggleSelect, onDelete, deleteConfirm, onDeleteConfirm, onDeleteCancel, onBurstEnter, onBurstExit]);
 
   const imageSrc = convertFileSrc(photo.path);
 
@@ -336,7 +350,7 @@ export function Preview({
                 <BurstThumb
                   key={member.path}
                   path={member.path}
-                  active={i === burstViewIndex}
+                  active={burstFocused && i === burstViewIndex}
                   selected={isPathSelected ? isPathSelected(member.path) : false}
                   onClick={() => onBurstNavigate(i)}
                 />
@@ -354,7 +368,7 @@ export function Preview({
           <span>Select for import</span>
         </button>
         <span className="preview-shortcuts">
-          ← → navigate &nbsp;&nbsp; Space select &nbsp;&nbsp; ⌫ delete &nbsp;&nbsp; ⌘I info &nbsp;&nbsp; Enter close
+          ← → navigate &nbsp;&nbsp; ↓↑ burst &nbsp;&nbsp; Space select &nbsp;&nbsp; ⌫ delete &nbsp;&nbsp; ⌘I info &nbsp;&nbsp; Enter close
         </span>
       </div>
 
