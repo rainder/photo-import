@@ -66,6 +66,7 @@ export default function App() {
   const [showTimeline, setShowTimeline] = useState(true);
   const [groupBursts, setGroupBursts] = useState(true);
   const [burstViewIndex, setBurstViewIndex] = useState(0);
+  const [burstFocused, setBurstFocused] = useState(false);
 
   useEffect(() => {
     store.get<boolean>("autoDetect").then((val) => {
@@ -665,8 +666,7 @@ export default function App() {
     (delta: number) => {
       if (previewIndex === null) return;
 
-      // When bursts are grouped, navigate within burst first
-      if (groupBursts) {
+      if (groupBursts && burstFocused) {
         const members = burstLookup.displayToBurstMembers.get(previewIndex);
         if (members && members.length > 1) {
           const newIdx = burstViewIndex + delta;
@@ -674,12 +674,15 @@ export default function App() {
             setBurstViewIndex(newIdx);
             return;
           }
+          // At edge of burst — exit burst and move to adjacent display photo
+          setBurstFocused(false);
         }
       }
 
       // Move to next/prev display photo
       setPreviewDirection(delta > 0 ? 1 : -1);
       setBurstViewIndex(0);
+      setBurstFocused(false);
       setPreviewIndex((prev) => {
         if (prev === null) return null;
         const next = prev + delta;
@@ -691,8 +694,20 @@ export default function App() {
         return resolved;
       });
     },
-    [displayPhotos.length, previewIndex, groupBursts, burstViewIndex, burstLookup]
+    [displayPhotos.length, previewIndex, groupBursts, burstFocused, burstViewIndex, burstLookup]
   );
+
+  const handleBurstEnter = useCallback(() => {
+    if (previewIndex === null || !groupBursts) return;
+    const members = burstLookup.displayToBurstMembers.get(previewIndex);
+    if (members && members.length > 1) {
+      setBurstFocused(true);
+    }
+  }, [previewIndex, groupBursts, burstLookup]);
+
+  const handleBurstExit = useCallback(() => {
+    setBurstFocused(false);
+  }, []);
 
   const handleImport = useCallback(() => {
     setImportStage("review");
@@ -966,7 +981,13 @@ export default function App() {
             gpxTrack={gpxTrack}
             burstMembers={members}
             burstViewIndex={burstViewIndex}
-            onBurstNavigate={setBurstViewIndex}
+            onBurstNavigate={(index: number) => {
+              setBurstViewIndex(index);
+              setBurstFocused(true);
+            }}
+            burstFocused={burstFocused}
+            onBurstEnter={handleBurstEnter}
+            onBurstExit={handleBurstExit}
             isPathSelected={selection.isSelected}
           />
         ) : null;
