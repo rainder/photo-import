@@ -4,6 +4,12 @@
   box-sizing: border-box;
 }
 
+html, body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  height: 100%;
+}
+
 .app {
   display: flex;
   flex-direction: column;
