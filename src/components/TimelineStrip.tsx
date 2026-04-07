@@ -94,12 +94,31 @@ export function TimelineStrip({
       }
     }
 
-    // Time labels
-    ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+    // Day separators
     ctx.font = "9px -apple-system, sans-serif";
     ctx.textBaseline = "top";
     const startDate = new Date(minT);
     const endDate = new Date(maxT);
+
+    // Find midnight boundaries between start and end
+    const day = new Date(startDate);
+    day.setHours(0, 0, 0, 0);
+    day.setDate(day.getDate() + 1); // first midnight after start
+    const dateFmt: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+    while (day.getTime() < maxT) {
+      const x = ((day.getTime() - minT) / range) * width;
+      // Vertical line
+      ctx.fillStyle = "rgba(255, 255, 255, 0.15)";
+      ctx.fillRect(Math.round(x), 0, 1, STRIP_HEIGHT);
+      // Date label
+      ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+      const label = day.toLocaleDateString(undefined, dateFmt);
+      ctx.fillText(label, Math.round(x) + 3, 2);
+      day.setDate(day.getDate() + 1);
+    }
+
+    // Time labels at edges
+    ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
     const fmt: Intl.DateTimeFormatOptions = { hour: "2-digit", minute: "2-digit" };
     ctx.fillText(startDate.toLocaleTimeString(undefined, fmt), 4, 2);
     const endLabel = endDate.toLocaleTimeString(undefined, fmt);
