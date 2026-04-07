@@ -6,6 +6,13 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "0.2.1",
+    date: "2026-04-07",
+    changes: [
+      "Fix ffmpeg, ffprobe, and exiftool not found in bundled .app (PATH not inherited from shell)",
+    ],
+  },
+  {
     version: "0.2.0",
     date: "2026-04-07",
     changes: [
