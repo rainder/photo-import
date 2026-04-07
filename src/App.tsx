@@ -302,6 +302,14 @@ export default function App() {
     return { cameras: Array.from(cameras), totalSize };
   }, [rawPhotos]);
 
+  const selectedSize = useMemo(() => {
+    let total = 0;
+    for (const p of rawPhotos) {
+      if (selection.isSelected(p.path)) total += p.size;
+    }
+    return total;
+  }, [rawPhotos, selection]);
+
   const photos = useMemo(() => {
     let filtered = [...rawPhotos];
     if (mediaFilter !== "all") filtered = filtered.filter((p) => p.media_type === mediaFilter);
@@ -847,7 +855,6 @@ export default function App() {
         </div>
       )}
       <Toolbar
-        selectedCount={selection.count}
         totalCount={displayPhotos.length}
         sortBy={sortBy}
         onSortChange={setSortBy}
@@ -930,7 +937,10 @@ export default function App() {
 
       {rawPhotos.length > 0 && (
         <div className="stats-bar">
-          <span>{photoCount} photos · {videoCount} videos · {stats.cameras.length} camera{stats.cameras.length !== 1 ? "s" : ""} · {formatSize(stats.totalSize)}</span>
+          <span>
+            {photoCount} photos · {videoCount} videos · {stats.cameras.length} camera{stats.cameras.length !== 1 ? "s" : ""} · {formatSize(stats.totalSize)}
+            {selection.count > 0 && <> · <strong>{selection.count} selected ({formatSize(selectedSize)})</strong></>}
+          </span>
           {stats.cameras.length > 1 && (
             <select
               className="toolbar-select"

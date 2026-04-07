@@ -2,7 +2,6 @@ type SortBy = "name-asc" | "name-desc" | "date-asc" | "date-desc";
 export type MediaFilter = "all" | "photo" | "video";
 
 interface ToolbarProps {
-  selectedCount: number;
   totalCount: number;
   sortBy: SortBy;
   onSortChange: (sort: SortBy) => void;
@@ -15,7 +14,6 @@ interface ToolbarProps {
 }
 
 export function Toolbar({
-  selectedCount,
   totalCount: _totalCount,
   sortBy,
   onSortChange,
@@ -49,9 +47,6 @@ export function Toolbar({
             Videos{videoCount > 0 ? ` (${videoCount})` : ""}
           </button>
         </div>
-        {selectedCount > 0 && (
-          <span className="toolbar-count">{selectedCount} selected</span>
-        )}
       </div>
       <div className="toolbar-right">
         <label className="toolbar-grid-size">
