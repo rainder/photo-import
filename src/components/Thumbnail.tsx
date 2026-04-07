@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { queueThumbnail, cancelPending, queueThumbnailHq, cancelPendingHq } from "../lib/thumbnailQueue";
+import { queueThumbnail, cancelPending, queueThumbnailHq } from "../lib/thumbnailQueue";
 import { formatDuration } from "./Preview";
 import type { BurstInfo } from "./Grid";
 import type { PhotoMeta } from "../lib/commands";
