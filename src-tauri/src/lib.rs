@@ -150,6 +150,18 @@ fn get_gpx_track() -> Vec<(f64, f64)> {
     gpx_support::get_gpx_track()
 }
 
+#[tauri::command]
+fn sync_menu_check(app: tauri::AppHandle, id: String, checked: bool) {
+    use tauri::menu::MenuItemKind;
+    if let Some(menu) = app.menu() {
+        if let Some(item) = menu.get(&id) {
+            if let MenuItemKind::Check(check_item) = item {
+                let _ = check_item.set_checked(checked);
+            }
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -173,7 +185,8 @@ pub fn run() {
             get_gpx_summary,
             get_gpx_summaries,
             match_photos_to_gpx,
-            get_gpx_track
+            get_gpx_track,
+            sync_menu_check
         ])
         .setup(|app| {
             let handle = app.handle();
@@ -218,10 +231,10 @@ pub fn run() {
                 .build()?;
 
             let view_menu = SubmenuBuilder::new(handle, "View")
-                .item(&MenuItem::with_id(handle, "toggle_map", "Toggle Map View", true, Some("CmdOrCtrl+M"))?)
-                .item(&MenuItem::with_id(handle, "toggle_info", "Toggle Info Panel", true, Some("CmdOrCtrl+I"))?)
-                .item(&MenuItem::with_id(handle, "toggle_timeline", "Toggle Timeline", true, Some("CmdOrCtrl+T"))?)
-                .item(&MenuItem::with_id(handle, "group_bursts", "Group Bursts", true, Some("CmdOrCtrl+B"))?)
+                .item(&CheckMenuItem::with_id(handle, "toggle_map", "Map View", true, false, Some("CmdOrCtrl+M"))?)
+                .item(&CheckMenuItem::with_id(handle, "toggle_info", "Info Panel", true, false, Some("CmdOrCtrl+I"))?)
+                .item(&CheckMenuItem::with_id(handle, "toggle_timeline", "Timeline", true, true, Some("CmdOrCtrl+T"))?)
+                .item(&CheckMenuItem::with_id(handle, "group_bursts", "Group Bursts", true, true, Some("CmdOrCtrl+B"))?)
                 .item(&MenuItem::with_id(handle, "reload", "Reload", true, Some("CmdOrCtrl+R"))?)
                 .separator()
                 .item(&MenuItem::with_id(handle, "zoom_in", "Zoom In", true, Some("CmdOrCtrl+="))?)

@@ -144,3 +144,7 @@ export async function matchPhotosToGpx(
 export async function getGpxTrack(): Promise<[number, number][]> {
   return invoke("get_gpx_track");
 }
+
+export async function syncMenuCheck(id: string, checked: boolean): Promise<void> {
+  return invoke("sync_menu_check", { id, checked });
+}

@@ -19,7 +19,7 @@ import { FullMap } from "./components/FullMap";
 import { TimelineStrip } from "./components/TimelineStrip";
 import { ExposureHistogram } from "./components/ExposureHistogram";
 import { detectGroups, type DetectionInfo } from "./lib/detectGroups";
-import { importToPhotos, importWithGps, deleteFromCard, ejectVolume, evictThumbnail, clearThumbnailCache, checkFfmpeg, loadGpx, unloadGpx, unloadGpxFile, matchPhotosToGpx, getGpxTrack, type PhotoMeta, type FfmpegStatus, type GpxSummary, type GpxMatch } from "./lib/commands";
+import { importToPhotos, importWithGps, deleteFromCard, ejectVolume, evictThumbnail, clearThumbnailCache, checkFfmpeg, loadGpx, unloadGpx, unloadGpxFile, matchPhotosToGpx, getGpxTrack, syncMenuCheck, type PhotoMeta, type FfmpegStatus, type GpxSummary, type GpxMatch } from "./lib/commands";
 import { open } from "@tauri-apps/plugin-dialog";
 import { listen } from "@tauri-apps/api/event";
 import { LazyStore } from "@tauri-apps/plugin-store";
@@ -69,19 +69,31 @@ export default function App() {
 
   useEffect(() => {
     store.get<boolean>("autoDetect").then((val) => {
-      if (val !== null && val !== undefined) setAutoDetect(val);
+      if (val !== null && val !== undefined) {
+        setAutoDetect(val);
+        syncMenuCheck("auto_detect", val);
+      }
     });
     store.get<number>("columnCount").then((val) => {
       if (val !== null && val !== undefined) setColumnCount(val);
     });
     store.get<boolean>("groupBursts").then((val) => {
-      if (val !== null && val !== undefined) setGroupBursts(val);
+      if (val !== null && val !== undefined) {
+        setGroupBursts(val);
+        syncMenuCheck("group_bursts", val);
+      }
     });
     store.get<boolean>("showTimeline").then((val) => {
-      if (val !== null && val !== undefined) setShowTimeline(val);
+      if (val !== null && val !== undefined) {
+        setShowTimeline(val);
+        syncMenuCheck("toggle_timeline", val);
+      }
     });
     store.get<boolean>("showGridInfo").then((val) => {
-      if (val !== null && val !== undefined) setShowGridInfo(val);
+      if (val !== null && val !== undefined) {
+        setShowGridInfo(val);
+        syncMenuCheck("toggle_info", val);
+      }
     });
     checkFfmpeg().then(setFfmpegStatus);
   }, []);
@@ -241,7 +253,7 @@ export default function App() {
       });
     },
     auto_detect: toggleAutoDetect,
-    toggle_map: () => setShowMap((v) => !v),
+    toggle_map: () => setShowMap((v) => !v),  // CheckMenuItem auto-toggles
     toggle_timeline: () => setShowTimeline((v) => {
       store.set("showTimeline", !v).then(() => store.save());
       return !v;
@@ -568,8 +580,10 @@ export default function App() {
       if (e.metaKey && e.key === "i") {
         e.preventDefault();
         setShowGridInfo((v) => {
-          store.set("showGridInfo", !v).then(() => store.save());
-          return !v;
+          const next = !v;
+          store.set("showGridInfo", next).then(() => store.save());
+          syncMenuCheck("toggle_info", next);
+          return next;
         });
         return;
       }
@@ -888,7 +902,7 @@ export default function App() {
             gpxTrack={gpxTrack}
             detection={focusedIndex >= 0 && displayPhotos[focusedIndex] ? detectionMap.get(displayPhotos[focusedIndex].path) : undefined}
             allPhotos={rawPhotos}
-            onClose={() => { setShowGridInfo(false); store.set("showGridInfo", false).then(() => store.save()); }}
+            onClose={() => { setShowGridInfo(false); store.set("showGridInfo", false).then(() => store.save()); syncMenuCheck("toggle_info", false); }}
           />
         }
       </div>
