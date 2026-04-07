@@ -2,11 +2,14 @@ import { useRef, useState, useEffect, useMemo, useCallback, useImperativeHandle,
 import { List, useListRef } from "react-window";
 import type { PhotoMeta } from "../lib/commands";
 import { Thumbnail } from "./Thumbnail";
+import type { DetectionInfo } from "../lib/detectGroups";
 
 export interface PhotoSection {
   label: string;
   photos: PhotoMeta[];
 }
+
+export type BurstInfo = { burstId: number; burstCount: number; burstIndex: number };
 
 interface GridProps {
   sections: PhotoSection[];
@@ -18,6 +21,11 @@ interface GridProps {
   onPreview: (index: number) => void;
   onSelectSection: (paths: string[], allSelected: boolean) => void;
   columnCount: number;
+  burstMap: Map<string, BurstInfo>;
+  rawPairMap: Map<string, string>;
+  detectionMap?: Map<string, DetectionInfo>;
+  groupBursts: boolean;
+  burstSelectedMap: Map<string, number>;
 }
 
 type Row =
@@ -33,6 +41,11 @@ interface RowExtraProps {
   onFocus: (index: number) => void;
   onPreview: (index: number) => void;
   onSelectSection: (paths: string[], allSelected: boolean) => void;
+  burstMap: Map<string, BurstInfo>;
+  rawPairMap: Map<string, string>;
+  detectionMap?: Map<string, DetectionInfo>;
+  groupBursts: boolean;
+  burstSelectedMap: Map<string, number>;
 }
 
 const HEADER_HEIGHT = 40;
@@ -53,6 +66,11 @@ function RowRenderer(props: {
     onFocus,
     onPreview,
     onSelectSection,
+    burstMap,
+    rawPairMap,
+    detectionMap,
+    groupBursts,
+    burstSelectedMap,
   } = props;
   const row = rows[index];
 
@@ -85,6 +103,11 @@ function RowRenderer(props: {
               onSelect={() => onSelect(photo.path)}
               onFocus={() => onFocus(flatIdx)}
               onPreview={() => onPreview(flatIdx)}
+              burstInfo={burstMap.get(photo.path)}
+              hasRawPair={rawPairMap.has(photo.path)}
+              detection={detectionMap?.get(photo.path)}
+              isBurstCover={groupBursts && (burstMap.get(photo.path)?.burstIndex === 0) && ((burstMap.get(photo.path)?.burstCount ?? 0) >= 2)}
+              burstSelectedCount={burstSelectedMap.get(photo.path)}
             />
           </div>
         );
@@ -107,6 +130,11 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
   onPreview,
   onSelectSection,
   columnCount,
+  burstMap,
+  rawPairMap,
+  detectionMap,
+  groupBursts,
+  burstSelectedMap,
 }, ref) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -175,8 +203,13 @@ export const Grid = forwardRef<GridHandle, GridProps>(function Grid({
       onFocus,
       onPreview,
       onSelectSection,
+      burstMap,
+      rawPairMap,
+      detectionMap,
+      groupBursts,
+      burstSelectedMap,
     }),
-    [rows, cellWidth, isSelected, focusedIndex, onSelect, onFocus, onPreview, onSelectSection]
+    [rows, cellWidth, isSelected, focusedIndex, onSelect, onFocus, onPreview, onSelectSection, burstMap, rawPairMap, detectionMap, groupBursts, burstSelectedMap]
   );
 
   const listRef = useListRef(null);

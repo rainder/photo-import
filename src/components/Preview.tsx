@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PhotoMeta } from "../lib/commands";
+import type { PhotoMeta, GpxMatch } from "../lib/commands";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { MiniMap } from "./MiniMap";
+import { queueThumbnail } from "../lib/thumbnailQueue";
 
 interface PreviewProps {
   photos: PhotoMeta[];
   currentIndex: number;
+  currentPhoto: PhotoMeta;
   isSelected: boolean;
   onClose: () => void;
   onNavigate: (delta: number) => void;
@@ -13,6 +16,18 @@ interface PreviewProps {
   deleteConfirm: boolean;
   onDeleteConfirm: () => void;
   onDeleteCancel: () => void;
+  gpxMatch?: GpxMatch;
+  gpxTrack?: [number, number][];
+  burstMembers?: PhotoMeta[];
+  burstViewIndex: number;
+  onBurstNavigate: (index: number) => void;
+  isPathSelected?: (path: string) => boolean;
+}
+
+export function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 function formatSize(bytes: number): string {
@@ -42,6 +57,7 @@ function formatDate(iso: string): string {
 export function Preview({
   photos,
   currentIndex,
+  currentPhoto,
   isSelected,
   onClose,
   onNavigate,
@@ -50,8 +66,15 @@ export function Preview({
   deleteConfirm,
   onDeleteConfirm,
   onDeleteCancel,
+  gpxMatch,
+  gpxTrack,
+  burstMembers,
+  burstViewIndex,
+  onBurstNavigate,
+  isPathSelected,
 }: PreviewProps) {
-  const photo = photos[currentIndex];
+  const photo = currentPhoto;
+  const [showInfo, setShowInfo] = useState(false);
   const [, forceRender] = useState(0);
   const zoomRef = useRef(1);
   const panRef = useRef({ x: 0, y: 0 });
@@ -95,7 +118,7 @@ export function Preview({
     zoomRef.current = 1;
     panRef.current = { x: 0, y: 0 };
     update();
-  }, [currentIndex, update]);
+  }, [currentPhoto.path, update]);
 
   // Pinch-to-zoom via wheel/gesture events
   useEffect(() => {
@@ -176,6 +199,12 @@ export function Preview({
         return;
       }
 
+      if (e.metaKey && e.key === "i") {
+        e.preventDefault();
+        setShowInfo((v) => !v);
+        return;
+      }
+
       switch (e.key) {
         case "Enter":
         case "Escape":
@@ -213,10 +242,39 @@ export function Preview({
           <span className="preview-meta">
             {formatSize(photo.size)} — {formatDate(photo.date)}
           </span>
+          {photo.media_type === "photo" && (photo.camera || photo.aperture || photo.iso) && (
+            <span className="preview-exif">
+              {[
+                photo.camera,
+                photo.lens,
+                photo.focal_length,
+                photo.aperture,
+                photo.shutter_speed,
+                photo.iso ? `ISO ${photo.iso}` : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          )}
+          {photo.media_type === "video" && (
+            <span className="preview-exif">
+              {[
+                photo.resolution,
+                photo.fps,
+                photo.codec,
+                photo.duration ? formatDuration(photo.duration) : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          )}
         </div>
         <div className="preview-nav-info">
           <span>
             {currentIndex + 1} of {photos.length}
+            {burstMembers && burstMembers.length > 1 && (
+              <span className="burst-position"> · burst {burstViewIndex + 1}/{burstMembers.length}</span>
+            )}
           </span>
           <button className="preview-close" onClick={onClose}>
             Esc ✕
@@ -227,11 +285,11 @@ export function Preview({
       <div
         className="preview-body"
         ref={bodyRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onDoubleClick={handleDoubleClick}
-        style={{ cursor: zoom > 1 ? (isPanning.current ? "grabbing" : "grab") : "default" }}
+        onPointerDown={photo.media_type === "video" ? undefined : handlePointerDown}
+        onPointerMove={photo.media_type === "video" ? undefined : handlePointerMove}
+        onPointerUp={photo.media_type === "video" ? undefined : handlePointerUp}
+        onDoubleClick={photo.media_type === "video" ? undefined : handleDoubleClick}
+        style={{ cursor: photo.media_type === "video" ? "default" : zoom > 1 ? (isPanning.current ? "grabbing" : "grab") : "default" }}
       >
         <button
           className="preview-arrow preview-arrow-left"
@@ -240,16 +298,26 @@ export function Preview({
           ←
         </button>
 
-        <img
-          className="preview-image"
-          src={imageSrc}
-          alt={photo.name}
-          draggable={false}
-          style={{
-            transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
-            transition: isPanning.current ? "none" : "transform 0.15s ease-out",
-          }}
-        />
+        {photo.media_type === "video" ? (
+          <video
+            className="preview-image"
+            src={imageSrc}
+            controls
+            autoPlay
+            draggable={false}
+          />
+        ) : (
+          <img
+            className="preview-image"
+            src={imageSrc}
+            alt={photo.name}
+            draggable={false}
+            style={{
+              transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
+              transition: isPanning.current ? "none" : "transform 0.15s ease-out",
+            }}
+          />
+        )}
 
         <button
           className="preview-arrow preview-arrow-right"
@@ -257,6 +325,25 @@ export function Preview({
         >
           →
         </button>
+      </div>
+
+      <div className={`burst-filmstrip ${burstMembers && burstMembers.length > 1 ? "open" : ""}`}>
+        {burstMembers && burstMembers.length > 1 && (
+          <>
+            <span className="burst-filmstrip-counter">{burstViewIndex + 1} / {burstMembers.length}</span>
+            <div className="burst-filmstrip-track">
+              {burstMembers.map((member, i) => (
+                <BurstThumb
+                  key={member.path}
+                  path={member.path}
+                  active={i === burstViewIndex}
+                  selected={isPathSelected ? isPathSelected(member.path) : false}
+                  onClick={() => onBurstNavigate(i)}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       <div className="preview-bottombar">
@@ -267,8 +354,58 @@ export function Preview({
           <span>Select for import</span>
         </button>
         <span className="preview-shortcuts">
-          ← → navigate &nbsp;&nbsp; Space select &nbsp;&nbsp; ⌫ delete &nbsp;&nbsp; Enter close
+          ← → navigate &nbsp;&nbsp; Space select &nbsp;&nbsp; ⌫ delete &nbsp;&nbsp; ⌘I info &nbsp;&nbsp; Enter close
         </span>
+      </div>
+
+      <div className={`preview-info-panel ${showInfo ? "open" : ""}`}>
+        <div className="preview-info-panel-header">
+          <span>Info</span>
+          <button onClick={() => setShowInfo(false)}>✕</button>
+        </div>
+        <div className="preview-info-panel-body">
+          <InfoRow label="File" value={photo.name} />
+          <InfoRow label="Size" value={formatSize(photo.size)} />
+          <InfoRow label="Date" value={formatDate(photo.date)} />
+          {photo.width && photo.height && (
+            <InfoRow label="Dimensions" value={`${photo.width} × ${photo.height}`} />
+          )}
+          {photo.media_type === "photo" && (
+            <>
+              <InfoRow label="Camera" value={photo.camera} />
+              <InfoRow label="Lens" value={photo.lens} />
+              <InfoRow label="Focal Length" value={photo.focal_length} />
+              <InfoRow label="Aperture" value={photo.aperture} />
+              <InfoRow label="Shutter" value={photo.shutter_speed} />
+              <InfoRow label="ISO" value={photo.iso} />
+            </>
+          )}
+          {photo.media_type === "video" && (
+            <>
+              <InfoRow label="Duration" value={photo.duration ? formatDuration(photo.duration) : undefined} />
+              <InfoRow label="Resolution" value={photo.resolution} />
+              <InfoRow label="Frame Rate" value={photo.fps} />
+              <InfoRow label="Codec" value={photo.codec} />
+            </>
+          )}
+          {(() => {
+            const lat = photo.latitude ?? gpxMatch?.lat;
+            const lon = photo.longitude ?? gpxMatch?.lon;
+            const src = photo.latitude != null ? "" : gpxMatch ? " (GPX)" : "";
+            return lat != null && lon != null ? (
+              <>
+                <div className="grid-info-map" style={{ margin: "8px 0" }}>
+                  <MiniMap lat={lat} lon={lon} gpxTrack={gpxTrack ?? []} />
+                </div>
+                <InfoRow label="GPS" value={`${lat.toFixed(5)}, ${lon.toFixed(5)}${src}`} />
+              </>
+            ) : null;
+          })()}
+          {photo.rating != null && photo.rating > 0 && (
+            <InfoRow label="Rating" value={"★".repeat(photo.rating) + "☆".repeat(5 - photo.rating)} />
+          )}
+          <InfoRow label="Path" value={photo.path} />
+        </div>
       </div>
 
       {deleteConfirm && (
@@ -283,6 +420,35 @@ export function Preview({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function BurstThumb({ path, active, selected, onClick }: { path: string; active: boolean; selected: boolean; onClick: () => void }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    queueThumbnail(path).then((url) => { if (!cancelled) setSrc(url); }, () => {});
+    return () => { cancelled = true; };
+  }, [path]);
+
+  return (
+    <button
+      className={`burst-filmstrip-thumb ${active ? "active" : ""}`}
+      onClick={onClick}
+    >
+      {src ? <img src={src} alt="" draggable={false} /> : <div className="burst-filmstrip-placeholder" />}
+      {selected && <span className="burst-filmstrip-check">✓</span>}
+    </button>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value?: string | null }) {
+  if (!value) return null;
+  return (
+    <div className="preview-info-row">
+      <span className="preview-info-label">{label}</span>
+      <span className="preview-info-value">{value}</span>
     </div>
   );
 }

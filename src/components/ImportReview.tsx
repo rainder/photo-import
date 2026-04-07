@@ -315,6 +315,7 @@ export function ImportReview({
         <Preview
           photos={photos}
           currentIndex={previewIndex}
+          currentPhoto={photos[previewIndex]}
           isSelected={selected.has(photos[previewIndex]?.path)}
           onClose={() => {
             setPreviewIndex(null);
@@ -327,6 +328,8 @@ export function ImportReview({
           deleteConfirm={false}
           onDeleteConfirm={() => {}}
           onDeleteCancel={() => {}}
+          burstViewIndex={0}
+          onBurstNavigate={() => {}}
         />
       )}
     </div>

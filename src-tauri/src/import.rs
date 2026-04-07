@@ -1,5 +1,6 @@
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::Path;
 use std::process::Command;
 
 #[derive(Debug, Clone, Serialize)]
@@ -14,17 +15,51 @@ pub struct ImportError {
     pub error: String,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct ImportItem {
+    pub path: String,
+    pub lat: Option<f64>,
+    pub lon: Option<f64>,
+}
+
 pub fn import_to_photos(paths: &[String]) -> ImportResult {
+    let items: Vec<ImportItem> = paths
+        .iter()
+        .map(|p| ImportItem {
+            path: p.clone(),
+            lat: None,
+            lon: None,
+        })
+        .collect();
+    import_to_photos_with_gps(&items)
+}
+
+pub fn import_to_photos_with_gps(items: &[ImportItem]) -> ImportResult {
     let mut succeeded = Vec::new();
     let mut failed = Vec::new();
+    let has_exiftool = check_exiftool();
 
-    for path in paths {
+    for item in items {
+        // If we have GPS data and exiftool, write GPS to a temp copy then import that
+        let import_path = if item.lat.is_some() && item.lon.is_some() && has_exiftool {
+            match prepare_gps_copy(&item.path, item.lat.unwrap(), item.lon.unwrap()) {
+                Ok(tmp) => tmp,
+                Err(e) => {
+                    // Fall back to importing without GPS
+                    eprintln!("GPS write failed, importing without GPS: {e}");
+                    item.path.clone()
+                }
+            }
+        } else {
+            item.path.clone()
+        };
+
         let script = format!(
             r#"tell application "Photos"
     activate
     import POSIX file "{}"
 end tell"#,
-            path.replace('\\', "\\\\").replace('"', "\\\"")
+            import_path.replace('\\', "\\\\").replace('"', "\\\"")
         );
 
         let output = Command::new("osascript")
@@ -32,20 +67,25 @@ end tell"#,
             .arg(&script)
             .output();
 
+        // Clean up temp file if we created one
+        if import_path != item.path {
+            let _ = fs::remove_file(&import_path);
+        }
+
         match output {
             Ok(out) if out.status.success() => {
-                succeeded.push(path.clone());
+                succeeded.push(item.path.clone());
             }
             Ok(out) => {
                 let stderr = String::from_utf8_lossy(&out.stderr).to_string();
                 failed.push(ImportError {
-                    path: path.clone(),
+                    path: item.path.clone(),
                     error: stderr,
                 });
             }
             Err(e) => {
                 failed.push(ImportError {
-                    path: path.clone(),
+                    path: item.path.clone(),
                     error: e.to_string(),
                 });
             }
@@ -53,6 +93,59 @@ end tell"#,
     }
 
     ImportResult { succeeded, failed }
+}
+
+fn check_exiftool() -> bool {
+    Command::new("exiftool")
+        .arg("-ver")
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .status()
+        .is_ok()
+}
+
+fn prepare_gps_copy(path: &str, lat: f64, lon: f64) -> Result<String, String> {
+    let src = Path::new(path);
+    let ext = src
+        .extension()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+    let stem = src
+        .file_stem()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
+
+    let tmp_dir = std::env::temp_dir().join("photo-import-gps");
+    fs::create_dir_all(&tmp_dir).map_err(|e| e.to_string())?;
+
+    let tmp_path = tmp_dir.join(format!("{stem}_gps.{ext}"));
+    fs::copy(path, &tmp_path).map_err(|e| format!("Copy failed: {e}"))?;
+
+    let tmp_str = tmp_path.to_string_lossy().to_string();
+
+    // Use exiftool to write GPS coordinates
+    let lat_ref = if lat >= 0.0 { "N" } else { "S" };
+    let lon_ref = if lon >= 0.0 { "E" } else { "W" };
+
+    let output = Command::new("exiftool")
+        .arg("-overwrite_original")
+        .arg(format!("-GPSLatitude={}", lat.abs()))
+        .arg(format!("-GPSLatitudeRef={lat_ref}"))
+        .arg(format!("-GPSLongitude={}", lon.abs()))
+        .arg(format!("-GPSLongitudeRef={lon_ref}"))
+        .arg(&tmp_str)
+        .output()
+        .map_err(|e| format!("exiftool failed: {e}"))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let _ = fs::remove_file(&tmp_path);
+        return Err(format!("exiftool error: {stderr}"));
+    }
+
+    Ok(tmp_str)
 }
 
 pub fn delete_from_card(paths: &[String]) -> DeleteResult {

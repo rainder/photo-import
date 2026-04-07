@@ -9,13 +9,14 @@ vi.mock("@tauri-apps/api/core", () => ({
 
 describe("Preview", () => {
   const mockPhotos = [
-    { name: "IMG_0001.JPG", path: "/a/IMG_0001.JPG", size: 5242880, date: "2026-03-28T10:00:00Z" },
-    { name: "IMG_0002.JPG", path: "/a/IMG_0002.JPG", size: 6291456, date: "2026-03-28T10:05:00Z" },
+    { name: "IMG_0001.JPG", path: "/a/IMG_0001.JPG", size: 5242880, date: "2026-03-28T10:00:00Z", media_type: "photo" as const },
+    { name: "IMG_0002.JPG", path: "/a/IMG_0002.JPG", size: 6291456, date: "2026-03-28T10:05:00Z", media_type: "photo" as const },
   ];
 
   const defaultProps = {
     photos: mockPhotos,
     currentIndex: 0,
+    currentPhoto: mockPhotos[0],
     isSelected: false,
     onClose: () => {},
     onNavigate: () => {},
@@ -24,11 +25,13 @@ describe("Preview", () => {
     deleteConfirm: false,
     onDeleteConfirm: () => {},
     onDeleteCancel: () => {},
+    burstViewIndex: 0,
+    onBurstNavigate: () => {},
   };
 
   it("shows filename and position", () => {
     render(<Preview {...defaultProps} />);
-    expect(screen.getByText("IMG_0001.JPG")).toBeTruthy();
+    expect(screen.getAllByText("IMG_0001.JPG").length).toBeGreaterThan(0);
     expect(screen.getByText(/1 of 2/)).toBeTruthy();
   });
 

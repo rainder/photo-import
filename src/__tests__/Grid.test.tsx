@@ -19,6 +19,10 @@ describe("Grid", () => {
         onPreview={() => {}}
         onSelectSection={() => {}}
         columnCount={5}
+        burstMap={new Map()}
+        rawPairMap={new Map()}
+        groupBursts={false}
+        burstSelectedMap={new Map()}
       />
     );
     expect(screen.getByText(/no photos/i)).toBeTruthy();
