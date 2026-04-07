@@ -307,7 +307,7 @@ fn read_gps_coord(exif: &exif::Exif, coord_tag: Tag, ref_tag: Tag) -> Option<f64
 }
 
 fn read_video_metadata(path: &str, meta: &mut PhotoMeta) {
-    let output = match std::process::Command::new("ffprobe")
+    let output = match std::process::Command::new(crate::resolve_tool("ffprobe"))
         .args([
             "-v", "quiet",
             "-print_format", "json",
@@ -508,7 +508,7 @@ fn extract_video_frame(path: &str) -> Result<image::DynamicImage, String> {
     };
     let frame_path = tmp_dir.join(format!("{hash}.jpg"));
 
-    let output = std::process::Command::new("ffmpeg")
+    let output = std::process::Command::new(crate::resolve_tool("ffmpeg"))
         .args([
             "-i", path, "-ss", "0.5", "-frames:v", "1", "-y",
             frame_path.to_str().unwrap(),

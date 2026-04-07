@@ -7,9 +7,28 @@ use gpx_support::{GpxMatch, GpxSummary};
 use import::{DeleteResult, ImportItem, ImportResult};
 use photos::PhotoMeta;
 use std::collections::HashMap;
+use std::path::PathBuf;
 use tauri::menu::{CheckMenuItem, MenuBuilder, MenuItem, PredefinedMenuItem, SubmenuBuilder};
 use tauri::Emitter;
 use volumes::CameraVolume;
+
+/// Resolve an external CLI tool by checking common Homebrew/system paths.
+/// macOS .app bundles don't inherit the user's shell PATH.
+pub fn resolve_tool(name: &str) -> PathBuf {
+    let candidates = [
+        format!("/opt/homebrew/bin/{name}"),
+        format!("/usr/local/bin/{name}"),
+        format!("/usr/bin/{name}"),
+    ];
+    for c in &candidates {
+        let p = PathBuf::from(c);
+        if p.exists() {
+            return p;
+        }
+    }
+    // Fall back to bare name (works if PATH is set, e.g. dev builds)
+    PathBuf::from(name)
+}
 
 #[tauri::command]
 async fn list_photos(volume_path: String) -> Result<Vec<PhotoMeta>, String> {
@@ -62,13 +81,13 @@ fn clear_thumbnail_cache() {
 
 #[tauri::command]
 fn check_ffmpeg() -> FfmpegStatus {
-    let has_ffmpeg = std::process::Command::new("ffmpeg")
+    let has_ffmpeg = std::process::Command::new(resolve_tool("ffmpeg"))
         .arg("-version")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .status()
         .is_ok();
-    let has_ffprobe = std::process::Command::new("ffprobe")
+    let has_ffprobe = std::process::Command::new(resolve_tool("ffprobe"))
         .arg("-version")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())

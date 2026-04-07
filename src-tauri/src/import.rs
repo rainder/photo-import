@@ -96,7 +96,7 @@ end tell"#,
 }
 
 fn check_exiftool() -> bool {
-    Command::new("exiftool")
+    Command::new(crate::resolve_tool("exiftool"))
         .arg("-ver")
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
@@ -129,7 +129,7 @@ fn prepare_gps_copy(path: &str, lat: f64, lon: f64) -> Result<String, String> {
     let lat_ref = if lat >= 0.0 { "N" } else { "S" };
     let lon_ref = if lon >= 0.0 { "E" } else { "W" };
 
-    let output = Command::new("exiftool")
+    let output = Command::new(crate::resolve_tool("exiftool"))
         .arg("-overwrite_original")
         .arg(format!("-GPSLatitude={}", lat.abs()))
         .arg(format!("-GPSLatitudeRef={lat_ref}"))
