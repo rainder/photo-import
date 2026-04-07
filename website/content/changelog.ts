@@ -6,6 +6,23 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "0.2.0",
+    date: "2026-04-07",
+    changes: [
+      "GPX geotagging: load multiple GPX files, auto-match photos by timestamp, write GPS EXIF on import",
+      "Burst photo grouping: collapsible burst groups in grid with filmstrip navigation in preview (⌘B)",
+      "Smart detection: duplicate, timelapse, and panorama badges on thumbnails",
+      "Full map view (⌘M) with geotagged photo pins and GPX track overlay",
+      "Native macOS app menu with keyboard shortcuts for all actions",
+      "Timeline density strip showing photo distribution over time",
+      "Exposure histogram (ISO, aperture, shutter speed) in info panel",
+      "Mini map in info panel for geotagged photos",
+      "Whole-window GPX drag-and-drop",
+      "Persist viewing preferences (timeline, info panel, burst grouping)",
+      "Section-aware keyboard navigation across date groups",
+    ],
+  },
+  {
     version: "0.1.1",
     date: "2026-04-05",
     changes: [

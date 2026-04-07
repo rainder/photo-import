@@ -15,13 +15,25 @@ const features = [
   {
     title: "Keyboard-First",
     description:
-      "Navigate, select, preview, and import — all without touching the mouse. Arrow keys, Space, Enter, and more.",
+      "Navigate, select, preview, and import — all without touching the mouse. Full native macOS menu with shortcuts.",
     icon: "⌨️",
   },
   {
-    title: "Quick Preview",
+    title: "GPX Geotagging",
     description:
-      "Full-size preview with left/right navigation. Select photos for import without leaving preview mode.",
+      "Drop GPX files to auto-match photos by timestamp. GPS coordinates are written to EXIF on import.",
+    icon: "📍",
+  },
+  {
+    title: "Burst Grouping",
+    description:
+      "Burst photos collapse into a single thumbnail. Expand in preview with a filmstrip to pick your best shot.",
+    icon: "🎞️",
+  },
+  {
+    title: "Smart Detection",
+    description:
+      "Automatically detects duplicates, timelapses, and panoramas with color-coded badges on thumbnails.",
     icon: "🔍",
   },
   {
@@ -31,10 +43,16 @@ const features = [
     icon: "📸",
   },
   {
-    title: "Date-Grouped Grid",
+    title: "Full Map View",
     description:
-      "Photos organized by date with section headers. Select entire days at once or pick individual shots.",
-    icon: "📅",
+      "Toggle a map showing all geotagged photos as pins with GPX track overlay. Click to jump to any photo.",
+    icon: "🗺️",
+  },
+  {
+    title: "Timeline & Histograms",
+    description:
+      "See photo density over time and exposure distribution (ISO, aperture, shutter) at a glance.",
+    icon: "📊",
   },
   {
     title: "Review Before Import",
@@ -49,9 +67,13 @@ const shortcuts = [
   { keys: "Space", action: "Select / deselect" },
   { keys: "Enter", action: "Open preview" },
   { keys: "⌘ Enter", action: "Review & import" },
-  { keys: "⌘ ⌫", action: "Delete photo" },
+  { keys: "⌘ ⌫", action: "Delete focused" },
   { keys: "⌘ +/−", action: "Zoom grid" },
-  { keys: "⌘ A", action: "Select all" },
+  { keys: "⌘ M", action: "Toggle map view" },
+  { keys: "⌘ B", action: "Group bursts" },
+  { keys: "⌘ I", action: "Toggle info panel" },
+  { keys: "⌘ T", action: "Toggle timeline" },
+  { keys: "⌘ G", action: "Load GPX file" },
   { keys: "⌘ R", action: "Reload" },
 ];
 
