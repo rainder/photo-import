@@ -797,19 +797,14 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 20px;
-  background: rgba(0, 0, 0, 0.8);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.25s ease, padding 0.25s ease, opacity 0.2s ease;
+  padding: 8px 20px;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 
 .burst-filmstrip.open {
-  max-height: 60px;
-  padding: 8px 20px;
-  opacity: 1;
+  background: rgba(0, 0, 0, 0.8);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .burst-filmstrip-counter {
