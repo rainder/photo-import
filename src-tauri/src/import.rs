@@ -39,10 +39,7 @@ pub fn import_to_photos_with_gps(items: &[ImportItem]) -> ImportResult {
     let mut failed = Vec::new();
     let has_exiftool = check_exiftool();
     let mut temp_files: Vec<String> = Vec::new();
-
-    // Clean up any leftover temp files from a previous import
     let tmp_dir = std::env::temp_dir().join("photo-import-gps");
-    let _ = fs::remove_dir_all(&tmp_dir);
 
     for item in items {
         // If we have GPS data and exiftool, write GPS to a temp copy then import that
@@ -134,7 +131,11 @@ fn prepare_gps_copy(path: &str, lat: f64, lon: f64) -> Result<String, String> {
     let tmp_dir = std::env::temp_dir().join("photo-import-gps");
     fs::create_dir_all(&tmp_dir).map_err(|e| e.to_string())?;
 
-    let tmp_path = tmp_dir.join(format!("{stem}_gps.{ext}"));
+    let id = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    let tmp_path = tmp_dir.join(format!("{stem}_gps_{id}.{ext}"));
     fs::copy(path, &tmp_path).map_err(|e| format!("Copy failed: {e}"))?;
 
     let tmp_str = tmp_path.to_string_lossy().to_string();
