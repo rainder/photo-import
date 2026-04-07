@@ -851,8 +851,6 @@ export default function App() {
         totalCount={displayPhotos.length}
         sortBy={sortBy}
         onSortChange={setSortBy}
-        onSelectAll={() => selection.selectAll(displayPhotos.map((p) => p.path))}
-        onDeselectAll={selection.deselectAll}
         columnCount={columnCount}
         onColumnCountChange={setColumnCount}
         mediaFilter={mediaFilter}

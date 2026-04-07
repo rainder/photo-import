@@ -6,8 +6,6 @@ interface ToolbarProps {
   totalCount: number;
   sortBy: SortBy;
   onSortChange: (sort: SortBy) => void;
-  onSelectAll: () => void;
-  onDeselectAll: () => void;
   columnCount: number;
   onColumnCountChange: (count: number) => void;
   mediaFilter: MediaFilter;
@@ -21,8 +19,6 @@ export function Toolbar({
   totalCount: _totalCount,
   sortBy,
   onSortChange,
-  onSelectAll,
-  onDeselectAll,
   columnCount,
   onColumnCountChange,
   mediaFilter,
@@ -53,8 +49,6 @@ export function Toolbar({
             Videos{videoCount > 0 ? ` (${videoCount})` : ""}
           </button>
         </div>
-        <button className="toolbar-btn" onClick={onSelectAll}>Select All</button>
-        <button className="toolbar-btn" onClick={onDeselectAll}>Deselect All</button>
         {selectedCount > 0 && (
           <span className="toolbar-count">{selectedCount} selected</span>
         )}
