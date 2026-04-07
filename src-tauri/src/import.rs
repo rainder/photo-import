@@ -38,12 +38,20 @@ pub fn import_to_photos_with_gps(items: &[ImportItem]) -> ImportResult {
     let mut succeeded = Vec::new();
     let mut failed = Vec::new();
     let has_exiftool = check_exiftool();
+    let mut temp_files: Vec<String> = Vec::new();
+
+    // Clean up any leftover temp files from a previous import
+    let tmp_dir = std::env::temp_dir().join("photo-import-gps");
+    let _ = fs::remove_dir_all(&tmp_dir);
 
     for item in items {
         // If we have GPS data and exiftool, write GPS to a temp copy then import that
         let import_path = if item.lat.is_some() && item.lon.is_some() && has_exiftool {
             match prepare_gps_copy(&item.path, item.lat.unwrap(), item.lon.unwrap()) {
-                Ok(tmp) => tmp,
+                Ok(tmp) => {
+                    temp_files.push(tmp.clone());
+                    tmp
+                }
                 Err(e) => {
                     // Fall back to importing without GPS
                     eprintln!("GPS write failed, importing without GPS: {e}");
@@ -67,11 +75,6 @@ end tell"#,
             .arg(&script)
             .output();
 
-        // Clean up temp file if we created one
-        if import_path != item.path {
-            let _ = fs::remove_file(&import_path);
-        }
-
         match output {
             Ok(out) if out.status.success() => {
                 succeeded.push(item.path.clone());
@@ -90,6 +93,17 @@ end tell"#,
                 });
             }
         }
+    }
+
+    // Clean up temp files after a delay to let Photos.app finish reading them
+    if !temp_files.is_empty() {
+        std::thread::spawn(move || {
+            std::thread::sleep(std::time::Duration::from_secs(30));
+            for f in &temp_files {
+                let _ = fs::remove_file(f);
+            }
+            let _ = fs::remove_dir_all(&tmp_dir);
+        });
     }
 
     ImportResult { succeeded, failed }
