@@ -50,6 +50,10 @@ export async function getThumbnail(path: string): Promise<string> {
   return invoke("get_thumbnail", { path });
 }
 
+export async function getThumbnailHq(path: string, width: number): Promise<string> {
+  return invoke("get_thumbnail_hq", { path, width });
+}
+
 export async function getCameraVolumes(): Promise<CameraVolume[]> {
   return invoke("get_camera_volumes");
 }

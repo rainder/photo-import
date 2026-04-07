@@ -45,6 +45,13 @@ async fn get_thumbnail(path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+async fn get_thumbnail_hq(path: String, width: u32) -> Result<String, String> {
+    tokio::task::spawn_blocking(move || photos::get_thumbnail_hq(&path, width))
+        .await
+        .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
 fn get_camera_volumes() -> Vec<CameraVolume> {
     volumes::list_camera_volumes()
 }
@@ -171,6 +178,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             list_photos,
             get_thumbnail,
+            get_thumbnail_hq,
             get_camera_volumes,
             import_to_photos,
             import_with_gps,

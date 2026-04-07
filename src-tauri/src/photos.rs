@@ -11,6 +11,9 @@ use std::sync::Mutex;
 static THUMBNAIL_CACHE: std::sync::LazyLock<Mutex<HashMap<String, String>>> =
     std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
 
+static HQ_THUMBNAIL_CACHE: std::sync::LazyLock<Mutex<HashMap<String, String>>> =
+    std::sync::LazyLock::new(|| Mutex::new(HashMap::new()));
+
 const THUMBNAIL_WIDTH: u32 = 400;
 
 #[derive(Debug, Clone, Serialize)]
@@ -428,6 +431,15 @@ fn resize_and_encode(img: image::DynamicImage) -> Result<String, String> {
     Ok(base64::engine::general_purpose::STANDARD.encode(buf.into_inner()))
 }
 
+fn resize_and_encode_width(img: image::DynamicImage, width: u32) -> Result<String, String> {
+    let resized = img.resize(width, u32::MAX, FilterType::Triangle);
+    let mut buf = std::io::Cursor::new(Vec::new());
+    resized
+        .write_to(&mut buf, image::ImageFormat::Jpeg)
+        .map_err(|e| format!("Failed to encode thumbnail: {e}"))?;
+    Ok(base64::engine::general_purpose::STANDARD.encode(buf.into_inner()))
+}
+
 pub fn get_thumbnail(path: &str) -> Result<String, String> {
     // Check cache first
     {
@@ -457,6 +469,33 @@ pub fn get_thumbnail(path: &str) -> Result<String, String> {
     // Cache and return
     let mut cache = THUMBNAIL_CACHE.lock().map_err(|e| e.to_string())?;
     cache.insert(path.to_string(), b64.clone());
+    Ok(b64)
+}
+
+pub fn get_thumbnail_hq(path: &str, width: u32) -> Result<String, String> {
+    let width = width.min(800);
+    let cache_key = format!("{path}_hq_{width}");
+
+    {
+        let cache = HQ_THUMBNAIL_CACHE.lock().map_err(|e| e.to_string())?;
+        if let Some(cached) = cache.get(&cache_key) {
+            return Ok(cached.clone());
+        }
+    }
+
+    let b64 = if is_video(path) {
+        let img = extract_video_frame(path)?;
+        resize_and_encode_width(img, width)?
+    } else {
+        let orientation = read_orientation(path);
+        let img = image::open(path)
+            .map_err(|e| format!("Failed to open image: {e}"))?;
+        let img = apply_orientation(img, orientation);
+        resize_and_encode_width(img, width)?
+    };
+
+    let mut cache = HQ_THUMBNAIL_CACHE.lock().map_err(|e| e.to_string())?;
+    cache.insert(cache_key, b64.clone());
     Ok(b64)
 }
 
@@ -537,6 +576,9 @@ pub fn evict_thumbnail(path: &str) {
 
 pub fn clear_thumbnail_cache() {
     if let Ok(mut cache) = THUMBNAIL_CACHE.lock() {
+        cache.clear();
+    }
+    if let Ok(mut cache) = HQ_THUMBNAIL_CACHE.lock() {
         cache.clear();
     }
 }
