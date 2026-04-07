@@ -138,7 +138,11 @@ export function Thumbnail({
         <div className="thumbnail-placeholder" />
       )}
 
-      {hqLoading && <div className="thumbnail-hq-loading" />}
+      {hqLoading && (
+        <div className="thumbnail-hq-loading">
+          <span /><span /><span />
+        </div>
+      )}
 
       {/* Top-left badges */}
       {topLeftBadges.length > 0 && (
