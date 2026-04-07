@@ -217,7 +217,7 @@ pub fn run() {
                 .separator()
                 .item(&MenuItem::with_id(handle, "import", "Import to Photos", true, Some("CmdOrCtrl+Return"))?)
                 .separator()
-                .item(&MenuItem::with_id(handle, "eject", "Eject SD Card", true, Some("CmdOrCtrl+E"))?)
+                .item(&MenuItem::with_id(handle, "eject", "Eject SD Card", true, Some("CmdOrCtrl+Shift+E"))?)
                 .separator()
                 .item(&CheckMenuItem::with_id(handle, "auto_detect", "Auto-detect SD Card", true, true, None::<&str>)?)
                 .separator()
@@ -240,7 +240,8 @@ pub fn run() {
 
             let view_menu = SubmenuBuilder::new(handle, "View")
                 .item(&CheckMenuItem::with_id(handle, "toggle_map", "Map View", true, false, Some("CmdOrCtrl+M"))?)
-                .item(&CheckMenuItem::with_id(handle, "toggle_info", "Info Panel", true, false, Some("CmdOrCtrl+I"))?)
+                .item(&CheckMenuItem::with_id(handle, "toggle_inspect", "Inspect Panel", true, false, Some("CmdOrCtrl+I"))?)
+                .item(&CheckMenuItem::with_id(handle, "toggle_stats", "Exposure Stats", true, false, Some("CmdOrCtrl+E"))?)
                 .item(&CheckMenuItem::with_id(handle, "toggle_timeline", "Timeline", true, true, Some("CmdOrCtrl+T"))?)
                 .item(&CheckMenuItem::with_id(handle, "group_bursts", "Group Bursts", true, true, Some("CmdOrCtrl+B"))?)
                 .item(&MenuItem::with_id(handle, "reload", "Reload", true, Some("CmdOrCtrl+R"))?)

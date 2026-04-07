@@ -46,6 +46,7 @@ function RowRenderer(props: {
               onSelect={() => onToggle(photo.path)}
               onFocus={() => onFocus(flatIdx)}
               onPreview={() => onPreview(flatIdx)}
+              cellWidth={cellWidth}
             />
           </div>
         );

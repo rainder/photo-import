@@ -1,6 +1,6 @@
 [package]
 name = "photo-import"
-version = "0.1.0"
+version = "0.3.0"
 description = "A Tauri App for importing photos from SD cards"
 authors = ["you"]
 edition = "2021"
@@ -32,6 +32,7 @@ tauri-plugin-store = "2"
 tauri-plugin-dialog = "2"
 tokio = { version = "1", features = ["rt"] }
 time = "0.3"
+little_exif = "0.6"
 
 [dev-dependencies]
 tempfile = "3"

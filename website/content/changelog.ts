@@ -6,6 +6,25 @@ export interface ChangelogEntry {
 
 export const changelog: ChangelogEntry[] = [
   {
+    version: "0.3.0",
+    date: "2026-04-07",
+    changes: [
+      "Two-pass thumbnail loading: fast EXIF thumbnails first, then conditional HQ upgrade for large grid cells",
+      "Pure Rust GPS EXIF writing via little_exif — no more exiftool dependency",
+      "Separate Inspect (⌘I) and Exposure Stats (⌘E) panels — aggregate data moved out of per-photo panel",
+      "Two-level burst navigation in preview: Left/Right skips bursts, Down enters filmstrip, Up exits",
+      "Burst mode persists when navigating past burst edges in preview",
+      "Timeline day separators with date labels",
+      "Secondary sort by filename when dates match",
+      "HQ loading indicator with pulsing dots on thumbnails",
+      "Fix preview filmstrip jitter between burst and non-burst photos",
+      "Fix overscroll rubber-band effect on macOS",
+      "Fix EXIF thumbnail orientation not applied",
+      "Removed Select All / Deselect All toolbar buttons",
+      "Selected count and size shown in stats bar",
+    ],
+  },
+  {
     version: "0.2.1",
     date: "2026-04-07",
     changes: [

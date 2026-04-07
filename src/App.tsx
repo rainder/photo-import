@@ -57,6 +57,7 @@ export default function App() {
   const [ffmpegStatus, setFfmpegStatus] = useState<FfmpegStatus | null>(null);
   const [ffmpegDismissed, setFfmpegDismissed] = useState(false);
   const [showGridInfo, setShowGridInfo] = useState(false);
+  const [showGridStats, setShowGridStats] = useState(false);
   const [gpxSummaries, setGpxSummaries] = useState<GpxSummary[]>([]);
   const [gpxMatches, setGpxMatches] = useState<Record<string, GpxMatch>>({});
   const [gpxTrack, setGpxTrack] = useState<[number, number][]>([]);
@@ -93,7 +94,13 @@ export default function App() {
     store.get<boolean>("showGridInfo").then((val) => {
       if (val !== null && val !== undefined) {
         setShowGridInfo(val);
-        syncMenuCheck("toggle_info", val);
+        syncMenuCheck("toggle_inspect", val);
+      }
+    });
+    store.get<boolean>("showGridStats").then((val) => {
+      if (val !== null && val !== undefined) {
+        setShowGridStats(val);
+        syncMenuCheck("toggle_stats", val);
       }
     });
     checkFfmpeg().then(setFfmpegStatus);
@@ -246,10 +253,17 @@ export default function App() {
     eject: () => { if (volume) ejectVolume(volume.path); },
     select_all_photos: () => selection.selectAll(displayPhotos.map((p) => p.path)),
     deselect_all: selection.deselectAll,
-    toggle_info: () => {
+    toggle_inspect: () => {
       if (previewIndex !== null) return;
       setShowGridInfo((v) => {
         store.set("showGridInfo", !v).then(() => store.save());
+        return !v;
+      });
+    },
+    toggle_stats: () => {
+      if (previewIndex !== null) return;
+      setShowGridStats((v) => {
+        store.set("showGridStats", !v).then(() => store.save());
         return !v;
       });
     },
@@ -322,10 +336,10 @@ export default function App() {
         filtered.sort((a, b) => b.name.localeCompare(a.name));
         break;
       case "date-asc":
-        filtered.sort((a, b) => a.date.localeCompare(b.date));
+        filtered.sort((a, b) => a.date.localeCompare(b.date) || a.name.localeCompare(b.name));
         break;
       case "date-desc":
-        filtered.sort((a, b) => b.date.localeCompare(a.date));
+        filtered.sort((a, b) => b.date.localeCompare(a.date) || b.name.localeCompare(a.name));
         break;
     }
     return filtered;
@@ -591,7 +605,18 @@ export default function App() {
         setShowGridInfo((v) => {
           const next = !v;
           store.set("showGridInfo", next).then(() => store.save());
-          syncMenuCheck("toggle_info", next);
+          syncMenuCheck("toggle_inspect", next);
+          return next;
+        });
+        return;
+      }
+
+      if (e.metaKey && !e.shiftKey && e.key === "e") {
+        e.preventDefault();
+        setShowGridStats((v) => {
+          const next = !v;
+          store.set("showGridStats", next).then(() => store.save());
+          syncMenuCheck("toggle_stats", next);
           return next;
         });
         return;
@@ -682,15 +707,13 @@ export default function App() {
             setBurstViewIndex(newIdx);
             return;
           }
-          // At edge of burst — exit burst and move to adjacent display photo
-          setBurstFocused(false);
+          // At edge of burst — move to adjacent display photo but stay in burst mode
         }
       }
 
       // Move to next/prev display photo
       setPreviewDirection(delta > 0 ? 1 : -1);
       setBurstViewIndex(0);
-      setBurstFocused(false);
       setPreviewIndex((prev) => {
         if (prev === null) return null;
         const next = prev + delta;
@@ -912,19 +935,21 @@ export default function App() {
             burstSelectedMap={burstSelectedMap}
           />
         )}
-        {
-          <GridInfoPanel
-            open={showGridInfo}
-            photo={focusedIndex >= 0 ? displayPhotos[focusedIndex] : null}
-            burstInfo={focusedIndex >= 0 && displayPhotos[focusedIndex] ? burstMap.get(displayPhotos[focusedIndex].path) : undefined}
-            rawPair={focusedIndex >= 0 && displayPhotos[focusedIndex] ? rawPairMap.get(displayPhotos[focusedIndex].path) : undefined}
-            gpxMatch={focusedIndex >= 0 && displayPhotos[focusedIndex] ? gpxMatches[displayPhotos[focusedIndex].path] : undefined}
-            gpxTrack={gpxTrack}
-            detection={focusedIndex >= 0 && displayPhotos[focusedIndex] ? detectionMap.get(displayPhotos[focusedIndex].path) : undefined}
-            allPhotos={rawPhotos}
-            onClose={() => { setShowGridInfo(false); store.set("showGridInfo", false).then(() => store.save()); syncMenuCheck("toggle_info", false); }}
-          />
-        }
+        <GridInfoPanel
+          open={showGridInfo}
+          photo={focusedIndex >= 0 ? displayPhotos[focusedIndex] : null}
+          burstInfo={focusedIndex >= 0 && displayPhotos[focusedIndex] ? burstMap.get(displayPhotos[focusedIndex].path) : undefined}
+          rawPair={focusedIndex >= 0 && displayPhotos[focusedIndex] ? rawPairMap.get(displayPhotos[focusedIndex].path) : undefined}
+          gpxMatch={focusedIndex >= 0 && displayPhotos[focusedIndex] ? gpxMatches[displayPhotos[focusedIndex].path] : undefined}
+          gpxTrack={gpxTrack}
+          detection={focusedIndex >= 0 && displayPhotos[focusedIndex] ? detectionMap.get(displayPhotos[focusedIndex].path) : undefined}
+          onClose={() => { setShowGridInfo(false); store.set("showGridInfo", false).then(() => store.save()); syncMenuCheck("toggle_inspect", false); }}
+        />
+        <GridStatsPanel
+          open={showGridStats}
+          photos={rawPhotos}
+          onClose={() => { setShowGridStats(false); store.set("showGridStats", false).then(() => store.save()); syncMenuCheck("toggle_stats", false); }}
+        />
       </div>
 
       {showTimeline && displayPhotos.length > 1 && (
@@ -1052,7 +1077,6 @@ function GridInfoPanel({
   gpxMatch,
   gpxTrack,
   detection,
-  allPhotos,
   onClose,
 }: {
   open: boolean;
@@ -1062,7 +1086,6 @@ function GridInfoPanel({
   gpxMatch?: GpxMatch;
   gpxTrack: [number, number][];
   detection?: DetectionInfo;
-  allPhotos: PhotoMeta[];
   onClose: () => void;
 }) {
   type Row = [string, string | undefined | null];
@@ -1108,7 +1131,7 @@ function GridInfoPanel({
   return (
     <div className={`grid-info-panel ${open ? "open" : ""}`}>
       <div className="grid-info-panel-header">
-        <span>Info</span>
+        <span>Inspect</span>
         <button onClick={onClose}>✕</button>
       </div>
       <div className="grid-info-panel-body">
@@ -1129,9 +1152,30 @@ function GridInfoPanel({
                 </div>
               ) : null
             )}
-            <ExposureHistogram photos={allPhotos} />
           </>
         )}
+      </div>
+    </div>
+  );
+}
+
+function GridStatsPanel({
+  open,
+  photos,
+  onClose,
+}: {
+  open: boolean;
+  photos: PhotoMeta[];
+  onClose: () => void;
+}) {
+  return (
+    <div className={`grid-info-panel ${open ? "open" : ""}`}>
+      <div className="grid-info-panel-header">
+        <span>Exposure Stats</span>
+        <button onClick={onClose}>✕</button>
+      </div>
+      <div className="grid-info-panel-body">
+        <ExposureHistogram photos={photos} />
       </div>
     </div>
   );

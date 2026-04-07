@@ -368,13 +368,13 @@ export function Preview({
           <span>Select for import</span>
         </button>
         <span className="preview-shortcuts">
-          ← → navigate {burstMembers && burstMembers.length > 1 && <>&nbsp;&nbsp; ↓↑ burst</>} &nbsp;&nbsp; Space select &nbsp;&nbsp; ⌫ delete &nbsp;&nbsp; ⌘I info &nbsp;&nbsp; Enter close
+          ← → navigate {burstMembers && burstMembers.length > 1 && <>&nbsp;&nbsp; ↓↑ burst</>} &nbsp;&nbsp; Space select &nbsp;&nbsp; ⌫ delete &nbsp;&nbsp; ⌘I inspect &nbsp;&nbsp; Enter close
         </span>
       </div>
 
       <div className={`preview-info-panel ${showInfo ? "open" : ""}`}>
         <div className="preview-info-panel-header">
-          <span>Info</span>
+          <span>Inspect</span>
           <button onClick={() => setShowInfo(false)}>✕</button>
         </div>
         <div className="preview-info-panel-body">

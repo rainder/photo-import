@@ -1,3 +1,6 @@
+use little_exif::exif_tag::ExifTag;
+use little_exif::metadata::Metadata;
+use little_exif::rational::uR64;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -37,13 +40,12 @@ pub fn import_to_photos(paths: &[String]) -> ImportResult {
 pub fn import_to_photos_with_gps(items: &[ImportItem]) -> ImportResult {
     let mut succeeded = Vec::new();
     let mut failed = Vec::new();
-    let has_exiftool = check_exiftool();
     let mut temp_files: Vec<String> = Vec::new();
     let tmp_dir = std::env::temp_dir().join("photo-import-gps");
 
     for item in items {
-        // If we have GPS data and exiftool, write GPS to a temp copy then import that
-        let import_path = if item.lat.is_some() && item.lon.is_some() && has_exiftool {
+        // If we have GPS data, write GPS to a temp copy then import that
+        let import_path = if item.lat.is_some() && item.lon.is_some() {
             match prepare_gps_copy(&item.path, item.lat.unwrap(), item.lon.unwrap()) {
                 Ok(tmp) => {
                     temp_files.push(tmp.clone());
@@ -106,13 +108,19 @@ end tell"#,
     ImportResult { succeeded, failed }
 }
 
-fn check_exiftool() -> bool {
-    Command::new(crate::resolve_tool("exiftool"))
-        .arg("-ver")
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .is_ok()
+/// Convert decimal degrees to EXIF DMS rationals
+fn decimal_to_dms(decimal: f64) -> Vec<uR64> {
+    let abs = decimal.abs();
+    let degrees = abs.floor() as u32;
+    let min_dec = (abs - degrees as f64) * 60.0;
+    let minutes = min_dec.floor() as u32;
+    let sec_dec = (min_dec - minutes as f64) * 60.0;
+    let seconds = (sec_dec * 10000.0).round() as u32;
+    vec![
+        uR64 { nominator: degrees, denominator: 1 },
+        uR64 { nominator: minutes, denominator: 1 },
+        uR64 { nominator: seconds, denominator: 10000 },
+    ]
 }
 
 fn prepare_gps_copy(path: &str, lat: f64, lon: f64) -> Result<String, String> {
@@ -140,25 +148,21 @@ fn prepare_gps_copy(path: &str, lat: f64, lon: f64) -> Result<String, String> {
 
     let tmp_str = tmp_path.to_string_lossy().to_string();
 
-    // Use exiftool to write GPS coordinates
+    // Write GPS coordinates using little_exif
+    let mut metadata = Metadata::new_from_path(&tmp_path)
+        .map_err(|e| format!("Failed to read EXIF: {e}"))?;
+
     let lat_ref = if lat >= 0.0 { "N" } else { "S" };
     let lon_ref = if lon >= 0.0 { "E" } else { "W" };
 
-    let output = Command::new(crate::resolve_tool("exiftool"))
-        .arg("-overwrite_original")
-        .arg(format!("-GPSLatitude={}", lat.abs()))
-        .arg(format!("-GPSLatitudeRef={lat_ref}"))
-        .arg(format!("-GPSLongitude={}", lon.abs()))
-        .arg(format!("-GPSLongitudeRef={lon_ref}"))
-        .arg(&tmp_str)
-        .output()
-        .map_err(|e| format!("exiftool failed: {e}"))?;
+    metadata.set_tag(ExifTag::GPSLatitude(decimal_to_dms(lat)));
+    metadata.set_tag(ExifTag::GPSLatitudeRef(lat_ref.to_string()));
+    metadata.set_tag(ExifTag::GPSLongitude(decimal_to_dms(lon)));
+    metadata.set_tag(ExifTag::GPSLongitudeRef(lon_ref.to_string()));
 
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        let _ = fs::remove_file(&tmp_path);
-        return Err(format!("exiftool error: {stderr}"));
-    }
+    metadata
+        .write_to_file(&tmp_path)
+        .map_err(|e| format!("Failed to write GPS EXIF: {e}"))?;
 
     Ok(tmp_str)
 }
@@ -212,5 +216,16 @@ mod tests {
         let result = delete_from_card(&["/nonexistent/file.jpg".to_string()]);
         assert_eq!(result.succeeded.len(), 0);
         assert_eq!(result.failed.len(), 1);
+    }
+
+    #[test]
+    fn test_decimal_to_dms() {
+        // 40.7128° N
+        let dms = decimal_to_dms(40.7128);
+        assert_eq!(dms[0].nominator, 40); // 40 degrees
+        assert_eq!(dms[0].denominator, 1);
+        assert_eq!(dms[1].nominator, 42); // 42 minutes
+        assert_eq!(dms[1].denominator, 1);
+        assert_eq!(dms[2].denominator, 10000); // seconds precision
     }
 }
