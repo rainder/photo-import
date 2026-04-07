@@ -453,11 +453,21 @@ pub fn get_thumbnail(path: &str) -> Result<String, String> {
         let img = extract_video_frame(path)?;
         resize_and_encode(img)?
     } else {
-        // Try embedded EXIF thumbnail first (usually already oriented)
+        // Try embedded EXIF thumbnail first, applying orientation
+        let orientation = read_orientation(path);
         match extract_exif_thumbnail(path) {
-            Some(b64) => b64,
+            Some(thumb_bytes) => {
+                let cursor = std::io::Cursor::new(
+                    base64::engine::general_purpose::STANDARD
+                        .decode(&thumb_bytes)
+                        .map_err(|e| format!("Failed to decode EXIF thumb: {e}"))?,
+                );
+                let img = image::load(cursor, image::ImageFormat::Jpeg)
+                    .map_err(|e| format!("Failed to load EXIF thumb: {e}"))?;
+                let img = apply_orientation(img, orientation);
+                resize_and_encode(img)?
+            }
             None => {
-                let orientation = read_orientation(path);
                 let img = image::open(path)
                     .map_err(|e| format!("Failed to open image: {e}"))?;
                 let img = apply_orientation(img, orientation);
