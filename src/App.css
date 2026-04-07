@@ -612,6 +612,8 @@
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.6);
   animation: hq-pulse 1s ease-in-out infinite;
+  z-index: 2;
+  pointer-events: none;
 }
 
 @keyframes hq-pulse {
