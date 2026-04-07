@@ -330,6 +330,9 @@ export function ImportReview({
           onDeleteCancel={() => {}}
           burstViewIndex={0}
           onBurstNavigate={() => {}}
+          burstFocused={false}
+          onBurstEnter={() => {}}
+          onBurstExit={() => {}}
         />
       )}
     </div>
