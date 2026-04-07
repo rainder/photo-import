@@ -465,7 +465,16 @@ pub fn get_thumbnail(path: &str) -> Result<String, String> {
                 let img = image::load(cursor, image::ImageFormat::Jpeg)
                     .map_err(|e| format!("Failed to load EXIF thumb: {e}"))?;
                 let img = apply_orientation(img, orientation);
-                resize_and_encode(img)?
+                // Only downscale, never upscale — preserve native size so
+                // the frontend can detect when HQ upgrade is needed
+                if img.width() > THUMBNAIL_WIDTH {
+                    resize_and_encode(img)?
+                } else {
+                    let mut buf = std::io::Cursor::new(Vec::new());
+                    img.write_to(&mut buf, image::ImageFormat::Jpeg)
+                        .map_err(|e| format!("Failed to encode thumbnail: {e}"))?;
+                    base64::engine::general_purpose::STANDARD.encode(buf.into_inner())
+                }
             }
             None => {
                 let img = image::open(path)
