@@ -108,6 +108,7 @@ function RowRenderer(props: {
               detection={detectionMap?.get(photo.path)}
               isBurstCover={groupBursts && (burstMap.get(photo.path)?.burstIndex === 0) && ((burstMap.get(photo.path)?.burstCount ?? 0) >= 2)}
               burstSelectedCount={burstSelectedMap.get(photo.path)}
+              cellWidth={cellWidth}
             />
           </div>
         );

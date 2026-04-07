@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { queueThumbnail, cancelPending } from "../lib/thumbnailQueue";
+import { queueThumbnail, cancelPending, queueThumbnailHq, cancelPendingHq } from "../lib/thumbnailQueue";
 import { formatDuration } from "./Preview";
 import type { BurstInfo } from "./Grid";
 import type { PhotoMeta } from "../lib/commands";
@@ -17,6 +17,7 @@ interface ThumbnailProps {
   detection?: DetectionInfo;
   isBurstCover?: boolean;
   burstSelectedCount?: number;
+  cellWidth: number;
 }
 
 export function Thumbnail({
@@ -31,12 +32,17 @@ export function Thumbnail({
   detection,
   isBurstCover,
   burstSelectedCount,
+  cellWidth,
 }: ThumbnailProps) {
   const [src, setSrc] = useState<string | null>(null);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [hqSrc, setHqSrc] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    setSrc(null);
+    setHqSrc(null);
     queueThumbnail(photo.path).then(
       (dataUrl) => {
         if (!cancelled) setSrc(dataUrl);
@@ -48,6 +54,27 @@ export function Thumbnail({
       cancelPending(photo.path);
     };
   }, [photo.path]);
+
+  // Re-evaluate HQ need when cell size changes (user zooms grid)
+  useEffect(() => {
+    if (!src || hqSrc) return;
+    const img = imgRef.current;
+    if (!img || img.naturalWidth === 0) return;
+    const needed = cellWidth * window.devicePixelRatio * 0.5;
+    if (img.naturalWidth >= needed) return;
+    let cancelled = false;
+    const targetWidth = Math.min(Math.ceil(cellWidth * window.devicePixelRatio), 800);
+    queueThumbnailHq(photo.path, targetWidth).then(
+      (dataUrl) => {
+        if (!cancelled) setHqSrc(dataUrl);
+      },
+      () => {}
+    );
+    return () => {
+      cancelled = true;
+      cancelPendingHq(photo.path);
+    };
+  }, [cellWidth, src, hqSrc, photo.path]);
 
   // Badges for top-left corner
   const topLeftBadges: string[] = [];
@@ -85,7 +112,24 @@ export function Thumbnail({
       onDoubleClick={onPreview}
     >
       {src ? (
-        <img src={src} alt={photo.name} draggable={false} />
+        <img
+          ref={imgRef}
+          src={hqSrc ?? src}
+          alt={photo.name}
+          draggable={false}
+          onLoad={() => {
+            if (hqSrc) return;
+            const img = imgRef.current;
+            if (!img) return;
+            const needed = cellWidth * window.devicePixelRatio * 0.5;
+            if (img.naturalWidth >= needed) return;
+            const targetWidth = Math.min(Math.ceil(cellWidth * window.devicePixelRatio), 800);
+            queueThumbnailHq(photo.path, targetWidth).then(
+              (dataUrl) => setHqSrc(dataUrl),
+              () => {}
+            );
+          }}
+        />
       ) : (
         <div className="thumbnail-placeholder" />
       )}
