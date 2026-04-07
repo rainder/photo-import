@@ -41,12 +41,15 @@ export function Thumbnail({
   const [hqLoading, setHqLoading] = useState(false);
   const hqWidthRef = useRef(0); // track the width we last requested HQ at
 
+  const firstPassNaturalWidth = useRef(0);
+
   useEffect(() => {
     let cancelled = false;
     setSrc(null);
     setHqSrc(null);
     setHqLoading(false);
     hqWidthRef.current = 0;
+    firstPassNaturalWidth.current = 0;
     queueThumbnail(photo.path).then(
       (dataUrl) => {
         if (!cancelled) setSrc(dataUrl);
@@ -59,31 +62,26 @@ export function Thumbnail({
     };
   }, [photo.path]);
 
-  // Re-evaluate HQ need when cell size changes (user zooms grid)
-  useEffect(() => {
-    if (!src) return;
+  // Request HQ upgrade if needed — called from onLoad and when cellWidth changes
+  const maybeUpgrade = useCallback(() => {
+    const sourceWidth = firstPassNaturalWidth.current;
+    if (sourceWidth === 0) return;
     const targetWidth = Math.min(Math.ceil(cellWidth * window.devicePixelRatio), 800);
-    // Already have an HQ at this width or larger
     if (hqWidthRef.current >= targetWidth) return;
-    // Check if current image is sharp enough
-    const img = imgRef.current;
-    if (!img || img.naturalWidth === 0) return;
     const needed = cellWidth * window.devicePixelRatio * 0.5;
-    if (img.naturalWidth >= needed) return;
-    let cancelled = false;
+    if (sourceWidth >= needed) return;
     hqWidthRef.current = targetWidth;
     setHqLoading(true);
     queueThumbnailHq(photo.path, targetWidth).then(
-      (dataUrl) => {
-        if (!cancelled) { setHqSrc(dataUrl); setHqLoading(false); }
-      },
-      () => { if (!cancelled) setHqLoading(false); }
+      (dataUrl) => { setHqSrc(dataUrl); setHqLoading(false); },
+      () => setHqLoading(false)
     );
-    return () => {
-      cancelled = true;
-      cancelPendingHq(photo.path);
-    };
-  }, [cellWidth, src, photo.path]);
+  }, [cellWidth, photo.path]);
+
+  // Re-evaluate when cell size changes (user zooms grid)
+  useEffect(() => {
+    maybeUpgrade();
+  }, [maybeUpgrade]);
 
   // Badges for top-left corner
   const topLeftBadges: string[] = [];
@@ -129,16 +127,11 @@ export function Thumbnail({
           onLoad={() => {
             const img = imgRef.current;
             if (!img) return;
-            const targetWidth = Math.min(Math.ceil(cellWidth * window.devicePixelRatio), 800);
-            if (hqWidthRef.current >= targetWidth) return;
-            const needed = cellWidth * window.devicePixelRatio * 0.5;
-            if (img.naturalWidth >= needed) return;
-            hqWidthRef.current = targetWidth;
-            setHqLoading(true);
-            queueThumbnailHq(photo.path, targetWidth).then(
-              (dataUrl) => { setHqSrc(dataUrl); setHqLoading(false); },
-              () => setHqLoading(false)
-            );
+            // Record first-pass natural width (only once, not after HQ swap)
+            if (firstPassNaturalWidth.current === 0) {
+              firstPassNaturalWidth.current = img.naturalWidth;
+            }
+            maybeUpgrade();
           }}
         />
       ) : (
