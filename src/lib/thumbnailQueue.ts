@@ -43,7 +43,7 @@ export function cancelPending(path: string) {
 
 // --- HQ thumbnail queue (lower concurrency, separate from first-pass) ---
 
-const HQ_MAX_CONCURRENT = 2;
+const HQ_MAX_CONCURRENT = 6;
 let hqActive = 0;
 const hqQueue: Array<{
   path: string;
