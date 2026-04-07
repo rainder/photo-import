@@ -38,11 +38,13 @@ export function Thumbnail({
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const [hqSrc, setHqSrc] = useState<string | null>(null);
+  const hqWidthRef = useRef(0); // track the width we last requested HQ at
 
   useEffect(() => {
     let cancelled = false;
     setSrc(null);
     setHqSrc(null);
+    hqWidthRef.current = 0;
     queueThumbnail(photo.path).then(
       (dataUrl) => {
         if (!cancelled) setSrc(dataUrl);
@@ -57,13 +59,17 @@ export function Thumbnail({
 
   // Re-evaluate HQ need when cell size changes (user zooms grid)
   useEffect(() => {
-    if (!src || hqSrc) return;
+    if (!src) return;
+    const targetWidth = Math.min(Math.ceil(cellWidth * window.devicePixelRatio), 800);
+    // Already have an HQ at this width or larger
+    if (hqWidthRef.current >= targetWidth) return;
+    // Check if current image is sharp enough
     const img = imgRef.current;
     if (!img || img.naturalWidth === 0) return;
     const needed = cellWidth * window.devicePixelRatio * 0.5;
     if (img.naturalWidth >= needed) return;
     let cancelled = false;
-    const targetWidth = Math.min(Math.ceil(cellWidth * window.devicePixelRatio), 800);
+    hqWidthRef.current = targetWidth;
     queueThumbnailHq(photo.path, targetWidth).then(
       (dataUrl) => {
         if (!cancelled) setHqSrc(dataUrl);
@@ -74,7 +80,7 @@ export function Thumbnail({
       cancelled = true;
       cancelPendingHq(photo.path);
     };
-  }, [cellWidth, src, hqSrc, photo.path]);
+  }, [cellWidth, src, photo.path]);
 
   // Badges for top-left corner
   const topLeftBadges: string[] = [];
@@ -118,12 +124,13 @@ export function Thumbnail({
           alt={photo.name}
           draggable={false}
           onLoad={() => {
-            if (hqSrc) return;
             const img = imgRef.current;
             if (!img) return;
+            const targetWidth = Math.min(Math.ceil(cellWidth * window.devicePixelRatio), 800);
+            if (hqWidthRef.current >= targetWidth) return;
             const needed = cellWidth * window.devicePixelRatio * 0.5;
             if (img.naturalWidth >= needed) return;
-            const targetWidth = Math.min(Math.ceil(cellWidth * window.devicePixelRatio), 800);
+            hqWidthRef.current = targetWidth;
             queueThumbnailHq(photo.path, targetWidth).then(
               (dataUrl) => setHqSrc(dataUrl),
               () => {}
