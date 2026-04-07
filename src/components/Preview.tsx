@@ -368,7 +368,7 @@ export function Preview({
           <span>Select for import</span>
         </button>
         <span className="preview-shortcuts">
-          ← → navigate &nbsp;&nbsp; ↓↑ burst &nbsp;&nbsp; Space select &nbsp;&nbsp; ⌫ delete &nbsp;&nbsp; ⌘I info &nbsp;&nbsp; Enter close
+          ← → navigate {burstMembers && burstMembers.length > 1 && <>&nbsp;&nbsp; ↓↑ burst</>} &nbsp;&nbsp; Space select &nbsp;&nbsp; ⌫ delete &nbsp;&nbsp; ⌘I info &nbsp;&nbsp; Enter close
         </span>
       </div>
 
