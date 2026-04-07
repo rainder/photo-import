@@ -603,6 +603,22 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+.thumbnail-hq-loading {
+  position: absolute;
+  bottom: 6px;
+  left: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+  animation: hq-pulse 1s ease-in-out infinite;
+}
+
+@keyframes hq-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
 .thumbnail-checkbox {
   position: absolute;
   top: 6px;

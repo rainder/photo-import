@@ -38,12 +38,14 @@ export function Thumbnail({
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const [hqSrc, setHqSrc] = useState<string | null>(null);
+  const [hqLoading, setHqLoading] = useState(false);
   const hqWidthRef = useRef(0); // track the width we last requested HQ at
 
   useEffect(() => {
     let cancelled = false;
     setSrc(null);
     setHqSrc(null);
+    setHqLoading(false);
     hqWidthRef.current = 0;
     queueThumbnail(photo.path).then(
       (dataUrl) => {
@@ -70,11 +72,12 @@ export function Thumbnail({
     if (img.naturalWidth >= needed) return;
     let cancelled = false;
     hqWidthRef.current = targetWidth;
+    setHqLoading(true);
     queueThumbnailHq(photo.path, targetWidth).then(
       (dataUrl) => {
-        if (!cancelled) setHqSrc(dataUrl);
+        if (!cancelled) { setHqSrc(dataUrl); setHqLoading(false); }
       },
-      () => {}
+      () => { if (!cancelled) setHqLoading(false); }
     );
     return () => {
       cancelled = true;
@@ -131,15 +134,18 @@ export function Thumbnail({
             const needed = cellWidth * window.devicePixelRatio * 0.5;
             if (img.naturalWidth >= needed) return;
             hqWidthRef.current = targetWidth;
+            setHqLoading(true);
             queueThumbnailHq(photo.path, targetWidth).then(
-              (dataUrl) => setHqSrc(dataUrl),
-              () => {}
+              (dataUrl) => { setHqSrc(dataUrl); setHqLoading(false); },
+              () => setHqLoading(false)
             );
           }}
         />
       ) : (
         <div className="thumbnail-placeholder" />
       )}
+
+      {hqLoading && <div className="thumbnail-hq-loading" />}
 
       {/* Top-left badges */}
       {topLeftBadges.length > 0 && (
